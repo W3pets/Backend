@@ -27,7 +27,7 @@ const login = async (req, res) => {
 
 const register = async (req, res) => {
   try {
-    const { username, name, email, password } = req.body;
+    const { username, email, password } = req.body;
 
     const existingUser = await getUserByEmail(email);
     if (existingUser)
@@ -37,14 +37,19 @@ const register = async (req, res) => {
 
     const newUser = await createUser({
       username,
-      name,
       email,
       password: hashedPassword,
+    });
+
+    // Generate JWT token
+    const token = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
     });
 
     res.status(201).json({
       message: "User created successfully",
       user: { email: newUser.email },
+      token,
     });
   } catch (error) {
     console.error("Error registering user:", error);
