@@ -53,7 +53,7 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use("/api/users", userRoutes);
 
 // Swagger UI middleware 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // 404 Route
 app.use((req, res) => res.status(404).json({ message: "Resource not found" }));
