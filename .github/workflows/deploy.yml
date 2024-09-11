@@ -33,5 +33,5 @@ jobs:
           ssh -T -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             cd ~/app
             npm install
-            systemctl restart w3pets.service
+            sudo systemctl restart w3pets.service
           EOF
