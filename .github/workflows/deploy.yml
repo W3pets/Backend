@@ -23,9 +23,9 @@ jobs:
 
       - name: Force-clone repository on the remote server using SSH
         run: |
-          ssh -T -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             rm -rf ~/app    # Remove the old app directory if it exists
-            git clone git@github.com:W3pets/Backend.git ~/app
+            GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=no' git clone git@github.com:W3pets/Backend.git ~/app
           EOF
 
       - name: Install npm dependencies
