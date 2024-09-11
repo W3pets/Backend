@@ -21,11 +21,11 @@ jobs:
       - name: Ensure app directory exists
         run: ssh -T -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ~/app"
 
-      - name: Force-clone repository on the remote server
+      - name: Force-clone repository on the remote server using SSH
         run: |
           ssh -T -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             rm -rf ~/app    # Remove the old app directory if it exists
-            git clone https://github.com/W3pets/Backend.git ~/app
+            git clone git@github.com:W3pets/Backend.git ~/app
           EOF
 
       - name: Install npm dependencies
@@ -33,4 +33,5 @@ jobs:
           ssh -T -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             cd ~/app
             npm install
+            systemctl restart all
           EOF
