@@ -5,6 +5,7 @@ import bodyParser from "body-parser";
 import userRoutes from "./routes/userRoutes.js";
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+import sellerRoutes from "./routes/sellerRoutes.js";
 
 dotenv.config();
 
@@ -43,6 +44,15 @@ const swaggerOptions = {
         url: `http://ec2-13-51-207-10.eu-north-1.compute.amazonaws.com`,
       },
     ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT'
+        }
+      }
+    }
   },
   apis: ['./routes/*.js', './server.js'], // Path to the API routes files
 };
@@ -51,6 +61,7 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
 // API Routes 
 app.use("/api/users", userRoutes);
+app.use("/api/sellers", sellerRoutes);
 
 // Swagger UI middleware 
 app.use('/', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

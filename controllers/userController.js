@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { createUser, getUserByEmail } from "../models/User.js";
 import dotenv from "dotenv";
+import { db } from "../db.js";
 
 dotenv.config();
 
@@ -22,7 +23,8 @@ const login = async (req, res) => {
     expiresIn: "1h",
   });
 
-  res.status(200).json({ token });
+  res.status(200).json({ user: { email: newUser.email },
+    token, });
 };
 
 const register = async (req, res) => {
@@ -57,4 +59,32 @@ const register = async (req, res) => {
   }
 };
 
-export { login, register };
+const becomeSeller = async (req, res) => {
+  try {
+    const { name, phoneNumber } = req.body;
+    const userId = req.user.verified.userId; // From JWT token
+
+    const updatedUser = await db.user.update({
+      where: { id: userId },
+      data: {
+        isSeller: true,
+        name,
+        phoneNumber,
+        role: "seller"
+      }
+    });
+
+    res.status(200).json({
+      message: "Successfully became a seller",
+      user: {
+        email: updatedUser.email,
+        isSeller: updatedUser.isSeller,
+        name: updatedUser.name
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating user to seller", error: error.message });
+  }
+};
+
+export { login, register, becomeSeller };

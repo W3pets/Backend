@@ -1,5 +1,5 @@
 import express from "express";
-import { login, register } from "../controllers/userController.js";
+import { login, register, becomeSeller } from "../controllers/userController.js";
 import { preventLoggedUser } from "../helpers/auth.js";
 
 const router = express.Router();
@@ -79,5 +79,56 @@ router.post("/login", preventLoggedUser, login);
  *                   type: string
  */
 router.post("/register", preventLoggedUser, register);
+
+/**
+ * @swagger
+ * /api/users/become-seller:
+ *   post:
+ *     summary: Upgrade a regular user to seller status
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - phoneNumber
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Full name of the seller
+ *               phoneNumber:
+ *                 type: string
+ *                 description: Contact phone number for the seller
+ *     responses:
+ *       200:
+ *         description: Successfully upgraded to seller status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Successfully became a seller
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     email:
+ *                       type: string
+ *                     isSeller:
+ *                       type: boolean
+ *                     name:
+ *                       type: string
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Server error
+ */
+router.post("/become-seller", loginRequired, becomeSeller);
 
 export default router;

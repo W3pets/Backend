@@ -23,3 +23,21 @@ export const preventLoggedUser = (req, res, next) => {
         res.status(400).send('Invalid token');
     }
 }
+
+export const sellerRequired = async (req, res, next) => {
+    const userId = req.user.verified.userId;
+    
+    try {
+      const user = await db.user.findUnique({
+        where: { id: userId }
+      });
+  
+      if (!user.isSeller) {
+        return res.status(403).json({ message: "Seller privileges required" });
+      }
+  
+      next();
+    } catch (error) {
+      res.status(500).json({ message: "Error checking seller status" });
+    }
+  };
