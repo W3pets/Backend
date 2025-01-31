@@ -14,23 +14,24 @@ datasource db {
 }
 
 model User {
-  id          Int      @id @default(autoincrement())
-  username    String   @unique
-  email       String   @unique
+  id          Int       @id @default(autoincrement())
+  username    String    @unique
+  email       String    @unique
   password    String
-  role        String   @default("customer")
+  role        String    @default("customer")
   // Seller specific fields
-  isSeller    Boolean  @default(false)
-  name        String?  // For seller profile
-  phoneNumber String?  // For seller profile
-  isVerified  Boolean  @default(false)
+  isSeller    Boolean   @default(false)
+  name        String? // For seller profile
+  phoneNumber String? // For seller profile
+  isVerified  Boolean   @default(false)
   products    Product[]
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
   orders      Order[]
+  Cart        Cart?
 }
 
 model Product {
-  id          Int      @id @default(autoincrement())
+  id          Int            @id @default(autoincrement())
   title       String
   category    String
   breed       String
@@ -42,11 +43,12 @@ model Product {
   description String
   imageUrl    String
   videoUrl    String
-  seller      User     @relation(fields: [sellerId], references: [id])
+  seller      User           @relation(fields: [sellerId], references: [id])
   sellerId    Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
   orders      OrderProduct[]
+  CartItem    CartItem[]
 }
 
 model Cart {
@@ -72,25 +74,26 @@ model CartItem {
 }
 
 model Order {
-  id            Int           @id @default(autoincrement())
-  user          User         @relation(fields: [userId], references: [id])
-  userId        Int
-  totalPrice    Float
-  status        String       @default("pending") // pending, processing, paid, failed, delivered
-  paymentId     String?      // Interswitch payment reference
-  paymentStatus String?      // success, failed, pending
+  id              Int            @id @default(autoincrement())
+  user            User           @relation(fields: [userId], references: [id])
+  userId          Int
+  totalPrice      Float
+  status          String         @default("pending") // pending, processing, paid, failed, delivered
+  paymentId       String? // Interswitch payment reference
+  paymentStatus   String? // success, failed, pending
   deliveryAddress String?
-  phoneNumber    String?
-  products      OrderProduct[]
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  phoneNumber     String?
+  products        OrderProduct[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 }
 
 model OrderProduct {
-  order       Order     @relation(fields: [orderId], references: [id])
-  orderId     Int
-  product     Product   @relation(fields: [productId], references: [id])
-  productId   Int
+  order     Order   @relation(fields: [orderId], references: [id])
+  orderId   Int
+  product   Product @relation(fields: [productId], references: [id])
+  productId Int
+
   @@id([orderId, productId])
   @@unique([orderId, productId])
 }
