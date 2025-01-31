@@ -5,7 +5,6 @@ import bodyParser from "body-parser";
 import userRoutes from "./routes/userRoutes.js";
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import sellerRoutes from "./routes/sellerRoutes.js";
 
 dotenv.config();
 
