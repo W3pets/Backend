@@ -14,9 +14,9 @@ const PORT = process.env.PORT || 3000;
 const whitelist = process.env["FRONTEND_URLS"].split(",");
 
 const corsOptions = {
-  origin: function (origin, callback) {
-    callback(null, true);
-  },
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 // const corsOptions = {
