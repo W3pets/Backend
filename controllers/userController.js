@@ -23,8 +23,14 @@ const login = async (req, res) => {
     expiresIn: "1h",
   });
 
-  res.status(200).json({ user: { email: newUser.email },
-    token, });
+  res.status(200).json({ 
+    user: { 
+      email: user.email,
+      isSeller: user.isSeller,
+      username: user.username 
+    },
+    token 
+  });
 };
 
 const register = async (req, res) => {
