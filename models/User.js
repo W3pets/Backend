@@ -1,11 +1,15 @@
 import { db } from "../helpers/db.js";
 
 
-const createUser = async ({username, name, email, password}) => {
+const createUser = async ({username, email, password}) => {
     try {
         return await db.user.create({
             data: {
-                username, name, email, password
+                username,
+                email,
+                password,
+                isSeller: false,
+                isVerified: false
             }
         });
     } catch (error) {
