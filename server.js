@@ -60,7 +60,6 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
 // API Routes 
 app.use("/api/users", userRoutes);
-app.use("/api/sellers", sellerRoutes);
 
 // Swagger UI middleware 
 app.use('/', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

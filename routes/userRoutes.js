@@ -1,6 +1,6 @@
 import express from "express";
 import { login, register, becomeSeller } from "../controllers/userController.js";
-import { preventLoggedUser } from "../helpers/auth.js";
+import { preventLoggedUser, loginRequired } from "../helpers/auth.js";
 
 const router = express.Router();
 
