@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 import express from "express";
 import bodyParser from "body-parser";
 import userRoutes from "./routes/userRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
+import cartRoutes from "./routes/cartRoutes.js";
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 
@@ -60,6 +62,8 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
 // API Routes 
 app.use("/api/users", userRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/cart", cartRoutes);
 
 // Swagger UI middleware 
 app.use('/', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
