@@ -57,9 +57,52 @@ const deleteEmailVerificationToken = async ({ email }) => {
     }
 }
 
+const createRefreshToken = async ({ userId }) => {
+    try {
+        const token = await db.refreshToken.create({
+            data: {
+                userId,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+                createdAt: new Date()
+            }
+        });
+        return token;
+    } catch (error) {
+        console.error("Error creating refresh token:", error);
+        return null;
+    }
+};
+
+const getRefreshToken = async ({ token }) => {
+    try {
+        return await db.refreshToken.findFirst({
+            where: {
+                token,
+                expiresAt: {
+                    gt: new Date()
+                }
+            }
+        });
+    } catch (error) {
+        return null;
+    }
+};
+
+const deleteRefreshToken = async ({ token }) => {
+    try {
+        return await db.refreshToken.delete({
+            where: { token }
+        });
+    } catch (error) {
+        return null;
+    }
+};
 
 export {
     generateEmailVerificationToken,
     getEmailVerificationToken,
-    deleteEmailVerificationToken
+    deleteEmailVerificationToken,
+    createRefreshToken,
+    getRefreshToken,
+    deleteRefreshToken
 }

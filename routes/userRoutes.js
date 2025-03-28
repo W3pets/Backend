@@ -1,5 +1,5 @@
 import express from "express";
-import { login, register, becomeSeller } from "../controllers/userController.js";
+import { login, register, becomeSeller, refreshToken, getCurrentUser } from "../controllers/userController.js";
 import { preventLoggedUser, loginRequired } from "../helpers/auth.js";
 
 const router = express.Router();
@@ -130,5 +130,64 @@ router.post("/register", preventLoggedUser, register);
  *         description: Server error
  */
 router.post("/become-seller", loginRequired, becomeSeller);
+
+/**
+ * @swagger
+ * /api/users/refresh-token:
+ *   post:
+ *     summary: Refresh the access token using a refresh token
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: New access and refresh tokens generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 accessToken:
+ *                   type: string
+ *                 refreshToken:
+ *                   type: string
+ */
+router.post("/refresh-token", refreshToken);
+
+/**
+ * @swagger
+ * /api/users/me:
+ *   get:
+ *     summary: Get current user information
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Current user information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 email:
+ *                   type: string
+ *                 username:
+ *                   type: string
+ *                 isSeller:
+ *                   type: boolean
+ *                 isVerified:
+ *                   type: boolean
+ */
+router.get("/me", loginRequired, getCurrentUser);
 
 export default router;
