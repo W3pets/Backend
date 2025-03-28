@@ -28,6 +28,7 @@ model User {
   createdAt   DateTime  @default(now())
   orders      Order[]
   Cart        Cart?
+  refreshTokens RefreshToken[]
 }
 
 model Product {
@@ -96,4 +97,16 @@ model OrderProduct {
 
   @@id([orderId, productId])
   @@unique([orderId, productId])
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([token])
+  @@index([userId])
 }
