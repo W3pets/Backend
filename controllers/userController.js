@@ -27,14 +27,21 @@ const login = async (req, res) => {
   // Generate refresh token
   const refreshToken = await createRefreshToken({ userId: user.id });
 
+  // Set refresh token as HTTP-only cookie
+  res.cookie('refreshToken', refreshToken.token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production', // Use secure in production
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+  });
+
   res.status(200).json({ 
     user: { 
       email: user.email,
       isSeller: user.isSeller,
       username: user.username 
     },
-    accessToken,
-    refreshToken: refreshToken.token
+    accessToken
   });
 };
 
@@ -62,6 +69,14 @@ const register = async (req, res) => {
     // Generate refresh token
     const refreshToken = await createRefreshToken({ userId: newUser.id });
 
+    // Set refresh token as HTTP-only cookie
+    res.cookie('refreshToken', refreshToken.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Use secure in production
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
     res.status(201).json({
       message: "User created successfully",
       user: { 
@@ -69,8 +84,7 @@ const register = async (req, res) => {
         username: newUser.username,
         isSeller: newUser.isSeller
       },
-      accessToken,
-      refreshToken: refreshToken.token
+      accessToken
     });
   } catch (error) {
     console.error("Error registering user:", error);
@@ -108,7 +122,10 @@ const becomeSeller = async (req, res) => {
 
 const refreshToken = async (req, res) => {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) {
+      return res.status(401).json({ message: "No refresh token provided" });
+    }
     
     // Verify refresh token
     const storedToken = await getRefreshToken({ token: refreshToken });
@@ -131,10 +148,15 @@ const refreshToken = async (req, res) => {
     await deleteRefreshToken({ token: refreshToken });
     const newRefreshToken = await createRefreshToken({ userId: user.id });
 
-    res.json({
-      accessToken,
-      refreshToken: newRefreshToken.token
+    // Set new refresh token as HTTP-only cookie
+    res.cookie('refreshToken', newRefreshToken.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
+
+    res.json({ accessToken });
   } catch (error) {
     res.status(500).json({ message: "Error refreshing token" });
   }
