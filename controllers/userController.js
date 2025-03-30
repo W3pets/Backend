@@ -47,7 +47,7 @@ const login = async (req, res) => {
 
 const register = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, phoneNumber } = req.body;
 
     const existingUser = await getUserByEmail(email);
     if (existingUser)
@@ -59,6 +59,7 @@ const register = async (req, res) => {
       username,
       email,
       password: hashedPassword,
+      phoneNumber
     });
 
     // Generate JWT token
@@ -82,7 +83,8 @@ const register = async (req, res) => {
       user: { 
         email: newUser.email,
         username: newUser.username,
-        isSeller: newUser.isSeller
+        isSeller: newUser.isSeller,
+        phoneNumber: newUser.phoneNumber
       },
       accessToken
     });
@@ -156,7 +158,7 @@ const refreshToken = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
-    res.json({ accessToken });
+    res.json({ token: accessToken });
   } catch (error) {
     res.status(500).json({ message: "Error refreshing token" });
   }

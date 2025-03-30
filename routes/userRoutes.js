@@ -53,12 +53,15 @@ router.post("/login", preventLoggedUser, login);
  *               - username
  *               - email
  *               - password
+ *               - phoneNumber
  *             properties:
  *               username:
  *                 type: string
  *               email:
  *                 type: string
  *               password:
+ *                 type: string
+ *               phoneNumber:
  *                 type: string
  *     responses:
  *       201:
@@ -75,7 +78,13 @@ router.post("/login", preventLoggedUser, login);
  *                   properties:
  *                     email:
  *                       type: string
- *                 token:
+ *                     username:
+ *                       type: string
+ *                     isSeller:
+ *                       type: boolean
+ *                     phoneNumber:
+ *                       type: string
+ *                 accessToken:
  *                   type: string
  */
 router.post("/register", preventLoggedUser, register);

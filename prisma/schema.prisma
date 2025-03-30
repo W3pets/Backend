@@ -22,7 +22,7 @@ model User {
   // Seller specific fields
   isSeller    Boolean   @default(false)
   name        String? // For seller profile
-  phoneNumber String? // For seller profile
+  phoneNumber String? // For user contact
   isVerified  Boolean   @default(false)
   products    Product[]
   createdAt   DateTime  @default(now())
