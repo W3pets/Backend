@@ -41,7 +41,7 @@ router.post("/login", preventLoggedUser, login);
  * @swagger
  * /api/users/register:
  *   post:
- *     summary: Register a new user
+ *     summary: Register a new regular user
  *     tags: [Users]
  *     requestBody:
  *       required: true
@@ -53,15 +53,12 @@ router.post("/login", preventLoggedUser, login);
  *               - username
  *               - email
  *               - password
- *               - phoneNumber
  *             properties:
  *               username:
  *                 type: string
  *               email:
  *                 type: string
  *               password:
- *                 type: string
- *               phoneNumber:
  *                 type: string
  *     responses:
  *       201:
@@ -82,9 +79,7 @@ router.post("/login", preventLoggedUser, login);
  *                       type: string
  *                     isSeller:
  *                       type: boolean
- *                     phoneNumber:
- *                       type: string
- *                 accessToken:
+ *                 token:
  *                   type: string
  */
 router.post("/register", preventLoggedUser, register);
@@ -94,6 +89,7 @@ router.post("/register", preventLoggedUser, register);
  * /api/users/become-seller:
  *   post:
  *     summary: Upgrade a regular user to seller status
+ *     description: Used when a regular user wants to become a seller. Requires authentication.
  *     tags: [Users]
  *     security:
  *       - bearerAuth: []
@@ -104,15 +100,19 @@ router.post("/register", preventLoggedUser, register);
  *           schema:
  *             type: object
  *             required:
- *               - name
+ *               - fullName
  *               - phoneNumber
+ *               - address
  *             properties:
- *               name:
+ *               fullName:
  *                 type: string
  *                 description: Full name of the seller
  *               phoneNumber:
  *                 type: string
  *                 description: Contact phone number for the seller
+ *               address:
+ *                 type: string
+ *                 description: Business address of the seller
  *     responses:
  *       200:
  *         description: Successfully upgraded to seller status
@@ -133,6 +133,10 @@ router.post("/register", preventLoggedUser, register);
  *                       type: boolean
  *                     name:
  *                       type: string
+ *                     phoneNumber:
+ *                       type: string
+ *                     address:
+ *                       type: string
  *       401:
  *         description: Not authenticated
  *       500:
@@ -144,31 +148,21 @@ router.post("/become-seller", loginRequired, becomeSeller);
  * @swagger
  * /api/users/refresh-token:
  *   post:
- *     summary: Refresh the access token using a refresh token
+ *     summary: Refresh the access token
+ *     description: Uses the HTTP-only refresh token cookie to generate a new access token
  *     tags: [Users]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - refreshToken
- *             properties:
- *               refreshToken:
- *                 type: string
  *     responses:
  *       200:
- *         description: New access and refresh tokens generated
+ *         description: New access token generated
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 accessToken:
+ *                 token:
  *                   type: string
- *                 refreshToken:
- *                   type: string
+ *       401:
+ *         description: No refresh token or invalid refresh token
  */
 router.post("/refresh-token", refreshToken);
 

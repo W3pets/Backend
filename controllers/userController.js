@@ -47,7 +47,7 @@ const login = async (req, res) => {
 
 const register = async (req, res) => {
   try {
-    const { username, email, password, phoneNumber } = req.body;
+    const { fullName, email, password, phoneNumber, address } = req.body;
 
     const existingUser = await getUserByEmail(email);
     if (existingUser)
@@ -56,10 +56,11 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await createUser({
-      username,
+      fullName,
       email,
       password: hashedPassword,
-      phoneNumber
+      phoneNumber,
+      address
     });
 
     // Generate JWT token
@@ -73,7 +74,7 @@ const register = async (req, res) => {
     // Set refresh token as HTTP-only cookie
     res.cookie('refreshToken', refreshToken.token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // Use secure in production
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
@@ -82,11 +83,12 @@ const register = async (req, res) => {
       message: "User created successfully",
       user: { 
         email: newUser.email,
-        username: newUser.username,
+        fullName: newUser.fullName,
         isSeller: newUser.isSeller,
-        phoneNumber: newUser.phoneNumber
+        phoneNumber: newUser.phoneNumber,
+        address: newUser.address
       },
-      accessToken
+      token: accessToken
     });
   } catch (error) {
     console.error("Error registering user:", error);
@@ -96,15 +98,16 @@ const register = async (req, res) => {
 
 const becomeSeller = async (req, res) => {
   try {
-    const { name, phoneNumber } = req.body;
+    const { fullName, phoneNumber, address } = req.body;
     const userId = req.user.verified.userId; // From JWT token
 
     const updatedUser = await db.user.update({
       where: { id: userId },
       data: {
         isSeller: true,
-        name,
+        name: fullName,
         phoneNumber,
+        address,
         role: "seller"
       }
     });
@@ -114,7 +117,9 @@ const becomeSeller = async (req, res) => {
       user: {
         email: updatedUser.email,
         isSeller: updatedUser.isSeller,
-        name: updatedUser.name
+        name: updatedUser.name,
+        phoneNumber: updatedUser.phoneNumber,
+        address: updatedUser.address
       }
     });
   } catch (error) {
