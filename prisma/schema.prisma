@@ -14,16 +14,22 @@ datasource db {
 }
 
 model User {
-  id            Int            @id @default(autoincrement())
-  username      String         @unique
-  email         String         @unique
-  password      String
-  role          String         @default("customer")
-  isSeller      Boolean        @default(false)
-  name          String?        // Seller's full name
-  phoneNumber   String?        // Seller's phone number
-  address       String?        // Seller's address
-  isVerified    Boolean        @default(false)
+  id                Int            @id @default(autoincrement())
+  email             String         @unique
+  password          String
+  role              String         @default("customer")
+  isSeller          Boolean        @default(false)
+  businessName      String?        
+  phoneNumber       String?        
+  address           String?        
+  city              String?        
+  state             String?        
+  location          String?        // For map coordinates
+  description       String?        // Seller description
+  profileImage      String?        
+  identityDocument  String?        
+  verificationStatus String?       
+  isVerified        Boolean        @default(false)
   products      Product[]
   createdAt     DateTime       @default(now())
   orders        Order[]

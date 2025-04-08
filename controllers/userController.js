@@ -47,25 +47,29 @@ const login = async (req, res) => {
 
 const register = async (req, res) => {
   try {
-    const { fullName, email, password, phoneNumber, address } = req.body;
+    const { fullName, email, password } = req.body;
+
+    // Validate required fields
+    if (!fullName || !email || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
 
     const existingUser = await getUserByEmail(email);
-    if (existingUser)
-      return res.status(400).json({ message: "User already exists" });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already registered" });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await createUser({
       fullName,
       email,
-      password: hashedPassword,
-      phoneNumber,
-      address
+      password: hashedPassword
     });
 
     // Generate JWT token
     const accessToken = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET, {
-      expiresIn: "15m", // Short-lived access token
+      expiresIn: "15m"
     });
 
     // Generate refresh token
@@ -80,15 +84,13 @@ const register = async (req, res) => {
     });
 
     res.status(201).json({
-      message: "User created successfully",
+      message: "Registration successful",
       user: { 
         email: newUser.email,
         fullName: newUser.fullName,
-        isSeller: newUser.isSeller,
-        phoneNumber: newUser.phoneNumber,
-        address: newUser.address
+        isSeller: newUser.isSeller
       },
-      token: accessToken
+      accessToken
     });
   } catch (error) {
     console.error("Error registering user:", error);
@@ -98,32 +100,84 @@ const register = async (req, res) => {
 
 const becomeSeller = async (req, res) => {
   try {
-    const { fullName, phoneNumber, address } = req.body;
-    const userId = req.user.verified.userId; // From JWT token
+    const { 
+      businessName,
+      phoneNumber, 
+      address,
+      city,
+      state,
+      location,
+      description,
+      profileImage 
+    } = req.body;
+    
+    const userId = req.user.verified.userId;
+
+    // Validate required fields
+    if (!businessName || !phoneNumber || !address || !city || !state) {
+      return res.status(400).json({ message: "All required fields must be filled" });
+    }
 
     const updatedUser = await db.user.update({
       where: { id: userId },
       data: {
         isSeller: true,
-        name: fullName,
+        businessName,
         phoneNumber,
         address,
+        city,
+        state,
+        location,
+        description,
+        profileImage,
         role: "seller"
       }
     });
 
     res.status(200).json({
-      message: "Successfully became a seller",
+      message: "Seller profile created successfully",
       user: {
         email: updatedUser.email,
+        businessName: updatedUser.businessName,
         isSeller: updatedUser.isSeller,
-        name: updatedUser.name,
         phoneNumber: updatedUser.phoneNumber,
-        address: updatedUser.address
+        address: updatedUser.address,
+        city: updatedUser.city,
+        state: updatedUser.state,
+        location: updatedUser.location,
+        description: updatedUser.description,
+        isVerified: updatedUser.isVerified
       }
     });
   } catch (error) {
-    res.status(500).json({ message: "Error updating user to seller", error: error.message });
+    res.status(500).json({ message: "Error updating seller profile", error: error.message });
+  }
+};
+
+// Add new function for identity verification
+const verifySellerIdentity = async (req, res) => {
+  try {
+    const userId = req.user.verified.userId;
+    const { identityDocument } = req.body;
+
+    if (!identityDocument) {
+      return res.status(400).json({ message: "Identity document is required" });
+    }
+
+    const updatedUser = await db.user.update({
+      where: { id: userId },
+      data: {
+        identityDocument,
+        verificationStatus: 'pending'
+      }
+    });
+
+    res.status(200).json({
+      message: "Identity verification submitted successfully",
+      verificationStatus: updatedUser.verificationStatus
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error submitting verification", error: error.message });
   }
 };
 
@@ -187,4 +241,11 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
-export { login, register, becomeSeller, refreshToken, getCurrentUser };
+export { 
+  login, 
+  register, 
+  becomeSeller, 
+  verifySellerIdentity,
+  refreshToken, 
+  getCurrentUser 
+};

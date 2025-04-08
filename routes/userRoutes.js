@@ -142,7 +142,8 @@ router.post("/register", preventLoggedUser, register);
  *       500:
  *         description: Server error
  */
-router.post("/become-seller", loginRequired, becomeSeller);
+router.post('/become-seller', loginRequired, becomeSeller);
+router.post('/verify-seller', loginRequired, verifySellerIdentity);
 
 /**
  * @swagger
