@@ -149,8 +149,65 @@ router.post("/register", preventLoggedUser, register);
  *       500:
  *         description: Server error
  */
-router.post('/become-seller', loginRequired, becomeSeller);
-router.post('/verify-seller', loginRequired, verifySellerIdentity);
+/**
+ * @swagger
+ * /api/users/seller/profile:
+ *   post:
+ *     summary: Step 1 - Create seller profile
+ *     tags: [Sellers]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - businessName
+ *               - phoneNumber
+ *               - address
+ *               - city
+ *               - state
+ *               - location
+ *             properties:
+ *               businessName:
+ *                 type: string
+ *               phoneNumber:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               city:
+ *                 type: string
+ *               state:
+ *                 type: string
+ *               location:
+ *                 type: object
+ *               description:
+ *                 type: string
+ *               profileImage:
+ *                 type: string
+ */
+router.post('/seller/profile', loginRequired, becomeSeller);
+
+/**
+ * @swagger
+ * /api/users/seller/verify:
+ *   post:
+ *     summary: Step 2 - Submit seller verification
+ *     tags: [Sellers]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - identityDocument
+ *             properties:
+ *               identityDocument:
+ *                 type: string
+ *                 format: binary
+ */
+router.post('/seller/verify', loginRequired, verifySellerIdentity);
 
 /**
  * @swagger
