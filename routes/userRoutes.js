@@ -1,5 +1,12 @@
 import express from "express";
-import { login, register, becomeSeller, refreshToken, getCurrentUser } from "../controllers/userController.js";
+import { 
+  login, 
+  register, 
+  becomeSeller, 
+  verifySellerIdentity, // Add this import
+  refreshToken, 
+  getCurrentUser 
+} from "../controllers/userController.js";
 import { preventLoggedUser, loginRequired } from "../helpers/auth.js";
 
 const router = express.Router();
