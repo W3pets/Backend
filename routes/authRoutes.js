@@ -46,9 +46,12 @@ const router = express.Router();
  *                 type: string
  *                 format: password
  *                 description: User's password
+ *               redirectUrl:
+ *                 type: string
+ *                 description: URL to redirect to after email verification
  *     responses:
  *       200:
- *         description: Verification code sent successfully
+ *         description: Verification link sent successfully
  *         content:
  *           application/json:
  *             schema:
@@ -56,7 +59,7 @@ const router = express.Router();
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Verification code sent to your email
+ *                   example: Verification link sent to your email
  *       400:
  *         description: User already exists
  *       500:
@@ -66,28 +69,18 @@ router.post("/signup", signup);
 
 /**
  * @swagger
- * /api/auth/verify-email:
- *   post:
+ * /api/auth/verify-email/{token}:
+ *   get:
  *     summary: Verify user's email
- *     description: Verifies user's email using OTP and creates user account
+ *     description: Verifies user's email using verification link
  *     tags: [Authentication]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - otp
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 description: User's email address
- *               otp:
- *                 type: string
- *                 description: One-time password received via email
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Email verification token
  *     responses:
  *       200:
  *         description: Email verified successfully
@@ -111,12 +104,15 @@ router.post("/signup", signup);
  *                       type: string
  *                     role:
  *                       type: string
+ *                 redirectUrl:
+ *                   type: string
+ *                   description: URL to redirect to after verification
  *       400:
- *         description: Invalid or expired OTP
+ *         description: Invalid or expired verification link
  *       500:
  *         description: Server error
  */
-router.post("/verify-email", verifyEmail);
+router.get("/verify-email/:token", verifyEmail);
 
 /**
  * @swagger

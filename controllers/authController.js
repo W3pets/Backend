@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { db } from "../helpers/db.js";
 import { sendEmail } from "../helpers/email.js";
-import { generateOTP, generateToken } from "../helpers/utils.js";
+import { generateToken } from "../helpers/utils.js";
 
 // Temporary storage for unverified users
 const unverifiedUsers = new Map();
@@ -11,7 +11,7 @@ const passwordResetTokens = new Map();
 
 export const signup = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, redirectUrl } = req.body;
 
     // Check if user already exists
     const existingUser = await db.oneOrNone(
@@ -25,33 +25,46 @@ export const signup = async (req, res) => {
       });
     }
 
-    // Generate OTP
-    const otp = generateOTP(6);
+    // Generate verification token
+    const verificationToken = generateToken({ email }, "verification");
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Store user data temporarily
-    unverifiedUsers.set(email, {
+    unverifiedUsers.set(verificationToken, {
       username,
       email,
       password: hashedPassword,
-      otp,
+      redirectUrl,
       createdAt: new Date(),
     });
+
+    // Create verification link
+    const verificationLink = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
 
     // Send verification email
     await sendEmail({
       to: email,
       subject: "Verify your email",
-      text: `Your verification code is: ${otp}`,
+      text: `Click here to verify your email: ${verificationLink}`,
       html: `
         <h1>Welcome to W3Pets!</h1>
-        <p>Your verification code is: <strong>${otp}</strong></p>
-        <p>This code will expire in 10 minutes.</p>
+        <p>Please verify your email address by clicking the button below:</p>
+        <a href="${verificationLink}" style="
+          display: inline-block;
+          background-color: #4CAF50;
+          color: white;
+          padding: 12px 24px;
+          text-decoration: none;
+          border-radius: 4px;
+          margin: 20px 0;
+        ">Verify Email</a>
+        <p>This link will expire in 24 hours.</p>
+        <p>If you didn't create an account, you can safely ignore this email.</p>
       `,
     });
 
     res.status(200).json({
-      message: "Verification code sent to your email",
+      message: "Verification link sent to your email",
     });
   } catch (error) {
     console.error("Signup error:", error);
@@ -63,23 +76,23 @@ export const signup = async (req, res) => {
 
 export const verifyEmail = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { token } = req.params;
 
     // Get user data from temporary storage
-    const userData = unverifiedUsers.get(email);
+    const userData = unverifiedUsers.get(token);
 
     if (!userData) {
       return res.status(400).json({
-        message: "Invalid or expired verification code",
+        message: "Invalid or expired verification link",
       });
     }
 
-    // Check if OTP is valid and not expired (10 minutes)
-    const isExpired = Date.now() - userData.createdAt > 10 * 60 * 1000;
-    if (isExpired || userData.otp !== otp) {
-      unverifiedUsers.delete(email);
+    // Check if token is expired (24 hours)
+    const isExpired = Date.now() - userData.createdAt > 24 * 60 * 60 * 1000;
+    if (isExpired) {
+      unverifiedUsers.delete(token);
       return res.status(400).json({
-        message: "Invalid or expired verification code",
+        message: "Verification link has expired",
       });
     }
 
@@ -102,7 +115,7 @@ export const verifyEmail = async (req, res) => {
     );
 
     // Clear temporary data
-    unverifiedUsers.delete(email);
+    unverifiedUsers.delete(token);
 
     // Set refresh token cookie
     res.cookie("refreshToken", refreshToken, {
@@ -112,7 +125,8 @@ export const verifyEmail = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    res.status(200).json({
+    // If there's a redirect URL, include it in the response
+    const response = {
       message: "Email verified successfully",
       accessToken,
       user: {
@@ -121,7 +135,13 @@ export const verifyEmail = async (req, res) => {
         email: newUser.email,
         role: newUser.role,
       },
-    });
+    };
+
+    if (userData.redirectUrl) {
+      response.redirectUrl = userData.redirectUrl;
+    }
+
+    res.status(200).json(response);
   } catch (error) {
     console.error("Email verification error:", error);
     res.status(500).json({
