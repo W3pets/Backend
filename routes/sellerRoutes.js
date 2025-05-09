@@ -215,4 +215,126 @@ router.put("/listings/:id/edit", loginRequired, sellerRequired, updateListing);
  */
 router.get("/listings/:id/preview", loginRequired, sellerRequired, getListingPreview);
 
+/**
+ * @swagger
+ * /api/seller/onboarding:
+ *   post:
+ *     summary: Complete seller onboarding
+ *     description: Creates seller profile and initial product listing
+ *     tags: [Seller Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - profile
+ *               - listing
+ *             properties:
+ *               profile:
+ *                 type: object
+ *                 required:
+ *                   - business_name
+ *                   - contact_phone
+ *                   - business_address
+ *                   - city
+ *                   - state
+ *                 properties:
+ *                   business_name:
+ *                     type: string
+ *                     description: Name of the business
+ *                   contact_phone:
+ *                     type: string
+ *                     description: Business contact phone number
+ *                   business_address:
+ *                     type: string
+ *                     description: Business address
+ *                   city:
+ *                     type: string
+ *                     description: City where business is located
+ *                   state:
+ *                     type: string
+ *                     description: State where business is located
+ *                   location_coords:
+ *                     type: object
+ *                     properties:
+ *                       lat:
+ *                         type: number
+ *                       lng:
+ *                         type: number
+ *                   seller_uniqueness:
+ *                     type: string
+ *                     description: What makes the seller unique
+ *                   brand_image:
+ *                     type: string
+ *                     description: URL to brand image/logo
+ *               listing:
+ *                 type: object
+ *                 required:
+ *                   - product_title
+ *                   - product_category
+ *                   - product_brand
+ *                   - age
+ *                   - quantity
+ *                   - weight
+ *                   - price
+ *                   - gender
+ *                   - product_photos
+ *                 properties:
+ *                   product_title:
+ *                     type: string
+ *                     description: Title of the product
+ *                   product_category:
+ *                     type: string
+ *                     description: Category of the product
+ *                   product_brand:
+ *                     type: string
+ *                     description: Brand of the product
+ *                   age:
+ *                     type: string
+ *                     description: Age of the animal
+ *                   quantity:
+ *                     type: number
+ *                     description: Available quantity
+ *                   weight:
+ *                     type: number
+ *                     description: Weight of the animal
+ *                   price:
+ *                     type: number
+ *                     description: Price in Naira
+ *                   gender:
+ *                     type: string
+ *                     description: Gender of the animal
+ *                   product_photos:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                     description: Array of product photo URLs
+ *                   product_video:
+ *                     type: string
+ *                     description: URL to product video (max 20MB)
+ *     responses:
+ *       200:
+ *         description: Seller onboarding completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 sellerId:
+ *                   type: number
+ *       400:
+ *         description: Missing required fields
+ *       401:
+ *         description: Not authenticated
+ *       500:
+ *         description: Server error
+ */
+router.post("/onboarding", loginRequired, onboardSeller);
+
 export default router; 
