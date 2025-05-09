@@ -241,6 +241,95 @@ const getCurrentUser = async (req, res) => {
   }
 };
 
+export const getUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const user = await db.one(
+      "SELECT id, username, email, role FROM users WHERE id = $1",
+      [userId]
+    );
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Get user profile error:", error);
+    res.status(500).json({
+      message: "Error retrieving user profile",
+    });
+  }
+};
+
+export const updateUserProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { username, email } = req.body;
+
+    // Check if email is already taken by another user
+    if (email) {
+      const existingUser = await db.oneOrNone(
+        "SELECT id FROM users WHERE email = $1 AND id != $2",
+        [email, userId]
+      );
+
+      if (existingUser) {
+        return res.status(400).json({
+          message: "Email already in use",
+        });
+      }
+    }
+
+    // Update user profile
+    const updatedUser = await db.one(
+      `UPDATE users 
+       SET username = COALESCE($1, username),
+           email = COALESCE($2, email)
+       WHERE id = $3
+       RETURNING id, username, email, role`,
+      [username, email, userId]
+    );
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Update user profile error:", error);
+    res.status(500).json({
+      message: "Error updating user profile",
+    });
+  }
+};
+
+export const deleteUserAccount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Start transaction
+    await db.tx(async (t) => {
+      // Delete user's refresh tokens
+      await t.none("DELETE FROM refresh_tokens WHERE user_id = $1", [userId]);
+
+      // Delete user's seller profile if exists
+      await t.none("DELETE FROM sellers WHERE user_id = $1", [userId]);
+
+      // Delete user's products if any
+      await t.none("DELETE FROM products WHERE seller_id IN (SELECT id FROM sellers WHERE user_id = $1)", [userId]);
+
+      // Finally delete the user
+      await t.none("DELETE FROM users WHERE id = $1", [userId]);
+    });
+
+    res.status(200).json({
+      message: "Account deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete user account error:", error);
+    res.status(500).json({
+      message: "Error deleting user account",
+    });
+  }
+};
+
 export { 
   login, 
   register, 
