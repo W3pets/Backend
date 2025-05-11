@@ -227,7 +227,7 @@ router.get("/listings/:id/preview", loginRequired, sellerRequired, getListingPre
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
@@ -270,13 +270,14 @@ router.get("/listings/:id/preview", loginRequired, sellerRequired, getListingPre
  *                     description: What makes the seller unique
  *                   brand_image:
  *                     type: string
- *                     description: URL to brand image/logo
+ *                     format: binary
+ *                     description: Brand image/logo file
  *               listing:
  *                 type: object
  *                 required:
  *                   - product_title
  *                   - product_category
- *                   - product_brand
+ *                   - product_breed
  *                   - age
  *                   - quantity
  *                   - weight
@@ -290,9 +291,9 @@ router.get("/listings/:id/preview", loginRequired, sellerRequired, getListingPre
  *                   product_category:
  *                     type: string
  *                     description: Category of the product
- *                   product_brand:
+ *                   product_breed:
  *                     type: string
- *                     description: Brand of the product
+ *                     description: Breed of the animal
  *                   age:
  *                     type: string
  *                     description: Age of the animal
@@ -312,10 +313,12 @@ router.get("/listings/:id/preview", loginRequired, sellerRequired, getListingPre
  *                     type: array
  *                     items:
  *                       type: string
- *                     description: Array of product photo URLs
+ *                       format: binary
+ *                     description: Array of product photo files
  *                   product_video:
  *                     type: string
- *                     description: URL to product video (max 20MB)
+ *                     format: binary
+ *                     description: Product video file (max 20MB)
  *     responses:
  *       200:
  *         description: Seller onboarding completed successfully

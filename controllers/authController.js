@@ -9,6 +9,27 @@ const unverifiedUsers = new Map();
 // Temporary storage for password reset tokens
 const passwordResetTokens = new Map();
 
+// Helper function to get user with seller info
+const getUserWithSellerInfo = async (userId) => {
+  const user = await db.one(
+    `SELECT u.id, u.username, u.email, u.role,
+            s.id as seller_id, s.is_verified as seller_verified
+     FROM users u
+     LEFT JOIN sellers s ON u.id = s.user_id
+     WHERE u.id = $1`,
+    [userId]
+  );
+
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    isSeller: !!user.seller_id,
+    sellerVerified: user.seller_verified || false
+  };
+};
+
 export const signup = async (req, res) => {
   try {
     const { username, email, password, redirectUrl } = req.body;
@@ -100,7 +121,7 @@ export const verifyEmail = async (req, res) => {
     const newUser = await db.one(
       `INSERT INTO users (username, email, password, role)
        VALUES ($1, $2, $3, $4)
-       RETURNING id, username, email, role`,
+       RETURNING id`,
       [userData.username, userData.email, userData.password, "user"]
     );
 
@@ -125,16 +146,14 @@ export const verifyEmail = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
+    // Get user with seller info
+    const user = await getUserWithSellerInfo(newUser.id);
+
     // If there's a redirect URL, include it in the response
     const response = {
       message: "Email verified successfully",
       accessToken,
-      user: {
-        id: newUser.id,
-        username: newUser.username,
-        email: newUser.email,
-        role: newUser.role,
-      },
+      user
     };
 
     if (userData.redirectUrl) {
@@ -271,6 +290,51 @@ export const resetPassword = async (req, res) => {
     console.error("Password reset error:", error);
     res.status(500).json({
       message: "Error resetting password",
+    });
+  }
+};
+
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await db.oneOrNone(
+      "SELECT * FROM users WHERE email = $1",
+      [email]
+    );
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({
+        message: "Invalid credentials",
+      });
+    }
+
+    const accessToken = generateToken(user, "access");
+    const refreshToken = generateToken(user, "refresh");
+
+    await db.none(
+      "INSERT INTO refresh_tokens (user_id, token) VALUES ($1, $2)",
+      [user.id, refreshToken]
+    );
+
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    const userWithSellerInfo = await getUserWithSellerInfo(user.id);
+
+    res.status(200).json({
+      message: "Login successful",
+      accessToken,
+      user: userWithSellerInfo,
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({
+      message: "Error during login",
     });
   }
 };

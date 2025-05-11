@@ -173,7 +173,7 @@ export const onboardSeller = async (req, res) => {
     const requiredListingFields = [
       "product_title",
       "product_category",
-      "product_brand",
+      "product_breed",
       "age",
       "quantity",
       "weight",
@@ -208,7 +208,7 @@ export const onboardSeller = async (req, res) => {
     }
 
     // Start transaction
-    await db.tx(async (t) => {
+    const result = await db.tx(async (t) => {
       // Create seller profile
       const seller = await t.one(
         `INSERT INTO sellers (
@@ -242,7 +242,7 @@ export const onboardSeller = async (req, res) => {
           seller_id,
           title,
           category,
-          brand,
+          breed,
           age,
           quantity,
           weight,
@@ -256,7 +256,7 @@ export const onboardSeller = async (req, res) => {
           seller.id,
           listing.product_title,
           listing.product_category,
-          listing.product_brand,
+          listing.product_breed,
           listing.age,
           listing.quantity,
           listing.weight,
@@ -275,7 +275,7 @@ export const onboardSeller = async (req, res) => {
 
     res.status(200).json({
       message: "Seller onboarding completed successfully",
-      sellerId: seller.id,
+      sellerId: result.sellerId,
     });
   } catch (error) {
     console.error("Seller onboarding error:", error);
