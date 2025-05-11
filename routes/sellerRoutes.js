@@ -341,4 +341,57 @@ router.post(
   onboardSeller
 );
 
+/**
+ * @swagger
+ * /api/seller/test-upload:
+ *   post:
+ *     summary: Test S3 file upload
+ *     description: Test endpoint to verify S3 file upload functionality
+ *     tags: [Seller Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               test_image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Test image file
+ *     responses:
+ *       200:
+ *         description: File uploaded successfully
+ *       400:
+ *         description: Invalid file type or size
+ *       500:
+ *         description: Server error
+ */
+router.post(
+  "/test-upload",
+  loginRequired,
+  uploadFiles([{ name: 'test_image', maxCount: 1 }]),
+  async (req, res) => {
+    try {
+      const file = req.files.test_image[0];
+      res.json({
+        message: "File uploaded successfully",
+        file: {
+          key: file.key,
+          url: `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${file.key}`,
+          size: file.size,
+          mimetype: file.mimetype
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Error uploading file",
+        error: error.message
+      });
+    }
+  }
+);
+
 export default router; 
