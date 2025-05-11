@@ -1,10 +1,12 @@
 import express from "express";
 import { loginRequired, sellerRequired } from "../helpers/auth.js";
+import { uploadFiles } from "../helpers/fileUpload.js";
 import { 
     getDashboardStats,
     getSellerListings,
     updateListing,
-    getListingPreview
+    getListingPreview,
+    onboardSeller
 } from "../controllers/sellerController.js";
 
 const router = express.Router();
@@ -231,94 +233,84 @@ router.get("/listings/:id/preview", loginRequired, sellerRequired, getListingPre
  *           schema:
  *             type: object
  *             required:
- *               - profile
- *               - listing
+ *               - business_name
+ *               - contact_phone
+ *               - business_address
+ *               - city
+ *               - state
+ *               - product_title
+ *               - product_category
+ *               - product_breed
+ *               - age
+ *               - quantity
+ *               - weight
+ *               - price
+ *               - gender
+ *               - product_photos
  *             properties:
- *               profile:
+ *               business_name:
+ *                 type: string
+ *                 description: Name of the business
+ *               contact_phone:
+ *                 type: string
+ *                 description: Business contact phone number
+ *               business_address:
+ *                 type: string
+ *                 description: Business address
+ *               city:
+ *                 type: string
+ *                 description: City where business is located
+ *               state:
+ *                 type: string
+ *                 description: State where business is located
+ *               location_coords:
  *                 type: object
- *                 required:
- *                   - business_name
- *                   - contact_phone
- *                   - business_address
- *                   - city
- *                   - state
  *                 properties:
- *                   business_name:
- *                     type: string
- *                     description: Name of the business
- *                   contact_phone:
- *                     type: string
- *                     description: Business contact phone number
- *                   business_address:
- *                     type: string
- *                     description: Business address
- *                   city:
- *                     type: string
- *                     description: City where business is located
- *                   state:
- *                     type: string
- *                     description: State where business is located
- *                   location_coords:
- *                     type: object
- *                     properties:
- *                       lat:
- *                         type: number
- *                       lng:
- *                         type: number
- *                   seller_uniqueness:
- *                     type: string
- *                     description: What makes the seller unique
- *                   brand_image:
- *                     type: string
- *                     format: binary
- *                     description: Brand image/logo file
- *               listing:
- *                 type: object
- *                 required:
- *                   - product_title
- *                   - product_category
- *                   - product_breed
- *                   - age
- *                   - quantity
- *                   - weight
- *                   - price
- *                   - gender
- *                   - product_photos
- *                 properties:
- *                   product_title:
- *                     type: string
- *                     description: Title of the product
- *                   product_category:
- *                     type: string
- *                     description: Category of the product
- *                   product_breed:
- *                     type: string
- *                     description: Breed of the animal
- *                   age:
- *                     type: string
- *                     description: Age of the animal
- *                   quantity:
+ *                   lat:
  *                     type: number
- *                     description: Available quantity
- *                   weight:
+ *                   lng:
  *                     type: number
- *                     description: Weight of the animal
- *                   price:
- *                     type: number
- *                     description: Price in Naira
- *                   gender:
- *                     type: string
- *                     description: Gender of the animal
- *                   product_photos:
- *                     type: array
- *                     items:
- *                       type: string
- *                       format: binary
- *                     description: Array of product photo files
- *                   product_video:
- *                     type: string
- *                     format: binary
- *                     description: Product video file (max 20MB)
+ *               seller_uniqueness:
+ *                 type: string
+ *                 description: What makes the seller unique
+ *               brand_image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Brand image/logo file
+ *               product_title:
+ *                 type: string
+ *                 description: Title of the product
+ *               product_category:
+ *                 type: string
+ *                 description: Category of the product
+ *               product_breed:
+ *                 type: string
+ *                 description: Breed of the animal
+ *               age:
+ *                 type: string
+ *                 description: Age of the animal
+ *               quantity:
+ *                 type: number
+ *                 description: Available quantity
+ *               weight:
+ *                 type: number
+ *                 description: Weight of the animal
+ *               price:
+ *                 type: number
+ *                 description: Price in Naira
+ *               gender:
+ *                 type: string
+ *                 description: Gender of the animal
+ *               product_photos:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: Array of product photo files
+ *               product_video:
+ *                 type: string
+ *                 format: binary
+ *                 description: Product video file (max 20MB)
  *     responses:
  *       200:
  *         description: Seller onboarding completed successfully
@@ -332,12 +324,21 @@ router.get("/listings/:id/preview", loginRequired, sellerRequired, getListingPre
  *                 sellerId:
  *                   type: number
  *       400:
- *         description: Missing required fields
+ *         description: Missing required fields or invalid file types
  *       401:
  *         description: Not authenticated
  *       500:
  *         description: Server error
  */
-router.post("/onboarding", loginRequired, onboardSeller);
+router.post(
+  "/onboarding",
+  loginRequired,
+  uploadFiles([
+    { name: 'brand_image', maxCount: 1 },
+    { name: 'product_photos', maxCount: 5 },
+    { name: 'product_video', maxCount: 1 }
+  ]),
+  onboardSeller
+);
 
 export default router; 

@@ -1,4 +1,5 @@
 import { db } from "../helpers/db.js";
+import { getFileUrl, deleteFile } from "../helpers/fileUpload.js";
 
 export const getDashboardStats = async (req, res) => {
     try {
@@ -157,20 +158,18 @@ export const getListingPreview = async (req, res) => {
 };
 
 export const onboardSeller = async (req, res) => {
+  const uploadedFiles = [];
   try {
     const userId = req.user.id;
-    const { profile, listing } = req.body;
+    const files = req.files;
 
     // Validate required fields
-    const requiredProfileFields = [
+    const requiredFields = [
       "business_name",
       "contact_phone",
       "business_address",
       "city",
       "state",
-    ];
-
-    const requiredListingFields = [
       "product_title",
       "product_category",
       "product_breed",
@@ -179,33 +178,33 @@ export const onboardSeller = async (req, res) => {
       "weight",
       "price",
       "gender",
-      "product_photos",
     ];
 
-    // Check required profile fields
-    for (const field of requiredProfileFields) {
-      if (!profile[field]) {
+    // Check required fields
+    for (const field of requiredFields) {
+      if (!req.body[field]) {
         return res.status(400).json({
           message: `Missing required field: ${field}`,
         });
       }
     }
 
-    // Check required listing fields
-    for (const field of requiredListingFields) {
-      if (!listing[field]) {
-        return res.status(400).json({
-          message: `Missing required field: ${field}`,
-        });
-      }
-    }
-
-    // Validate product photos
-    if (!Array.isArray(listing.product_photos) || listing.product_photos.length === 0) {
+    // Validate files
+    if (!files.brand_image || !files.product_photos) {
       return res.status(400).json({
-        message: "At least one product photo is required",
+        message: "Brand image and at least one product photo are required",
       });
     }
+
+    // Track uploaded files for cleanup in case of error
+    if (files.brand_image) uploadedFiles.push(files.brand_image[0].key);
+    if (files.product_photos) uploadedFiles.push(...files.product_photos.map(f => f.key));
+    if (files.product_video) uploadedFiles.push(files.product_video[0].key);
+
+    // Get file URLs
+    const brandImageUrl = getFileUrl(files.brand_image[0].key);
+    const productPhotoUrls = files.product_photos.map(file => getFileUrl(file.key));
+    const productVideoUrl = files.product_video ? getFileUrl(files.product_video[0].key) : null;
 
     // Start transaction
     const result = await db.tx(async (t) => {
@@ -225,14 +224,14 @@ export const onboardSeller = async (req, res) => {
         RETURNING id`,
         [
           userId,
-          profile.business_name,
-          profile.contact_phone,
-          profile.business_address,
-          profile.city,
-          profile.state,
-          profile.location_coords,
-          profile.seller_uniqueness,
-          profile.brand_image,
+          req.body.business_name,
+          req.body.contact_phone,
+          req.body.business_address,
+          req.body.city,
+          req.body.state,
+          req.body.location_coords,
+          req.body.seller_uniqueness,
+          brandImageUrl,
         ]
       );
 
@@ -254,16 +253,16 @@ export const onboardSeller = async (req, res) => {
         RETURNING id`,
         [
           seller.id,
-          listing.product_title,
-          listing.product_category,
-          listing.product_breed,
-          listing.age,
-          listing.quantity,
-          listing.weight,
-          listing.price,
-          listing.gender,
-          listing.product_photos,
-          listing.product_video,
+          req.body.product_title,
+          req.body.product_category,
+          req.body.product_breed,
+          req.body.age,
+          req.body.quantity,
+          req.body.weight,
+          req.body.price,
+          req.body.gender,
+          productPhotoUrls,
+          productVideoUrl,
         ]
       );
 
@@ -279,8 +278,15 @@ export const onboardSeller = async (req, res) => {
     });
   } catch (error) {
     console.error("Seller onboarding error:", error);
+    
+    // Clean up uploaded files if transaction fails
+    if (uploadedFiles.length > 0) {
+      await Promise.all(uploadedFiles.map(key => deleteFile(key)));
+    }
+
     res.status(500).json({
       message: "Error during seller onboarding",
+      error: error.message
     });
   }
 }; 
