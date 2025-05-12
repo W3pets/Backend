@@ -1,5 +1,5 @@
 import { db } from "../helpers/db.js";
-import { getFileUrl, deleteFile } from "../helpers/fileUpload.js";
+import { getFileUrl } from "../helpers/fileUpload.js";
 
 export const getDashboardStats = async (req, res) => {
     try {
@@ -158,7 +158,6 @@ export const getListingPreview = async (req, res) => {
 };
 
 export const onboardSeller = async (req, res) => {
-  const uploadedFiles = [];
   try {
     const userId = req.user.id;
     const files = req.files;
@@ -195,11 +194,6 @@ export const onboardSeller = async (req, res) => {
         message: "Brand image and at least one product photo are required",
       });
     }
-
-    // Track uploaded files for cleanup in case of error
-    if (files.brand_image) uploadedFiles.push(files.brand_image[0].key);
-    if (files.product_photos) uploadedFiles.push(...files.product_photos.map(f => f.key));
-    if (files.product_video) uploadedFiles.push(files.product_video[0].key);
 
     // Get file URLs
     const brandImageUrl = getFileUrl(files.brand_image[0].key);
@@ -278,15 +272,8 @@ export const onboardSeller = async (req, res) => {
     });
   } catch (error) {
     console.error("Seller onboarding error:", error);
-    
-    // Clean up uploaded files if transaction fails
-    if (uploadedFiles.length > 0) {
-      await Promise.all(uploadedFiles.map(key => deleteFile(key)));
-    }
-
     res.status(500).json({
       message: "Error during seller onboarding",
-      error: error.message
     });
   }
 }; 
