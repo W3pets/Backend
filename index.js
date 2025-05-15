@@ -16,12 +16,39 @@ const allowedOrigins = (process.env.FRONTEND_URLS || '').split(',').map(url => u
 
 // Request logging middleware
 app.use((req, res, next) => {
-  console.log('\n=== New Request ===');
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
-  console.log('Files:', req.files);
-  console.log('==================\n');
+  const startTime = Date.now();
+
+  res.on("finish", () => {
+    const duration = Date.now() - startTime;
+    const logData = {
+      timestamp: new Date().toISOString(),
+      method: req.method,
+      url: req.originalUrl,
+      statusCode: res.statusCode,
+      duration: `${duration}ms`,
+      ip: req.ip,
+      userAgent: req.get('user-agent'),
+      requestBody: req.body && Object.keys(req.body).length > 0 ? req.body : undefined,
+      responseBody: res.locals.responseBody || undefined
+    };
+    
+    // Log different levels based on status code
+    if (res.statusCode >= 500) {
+      console.error('Server Error:', logData);
+    } else if (res.statusCode >= 400) {
+      console.warn('Client Error:', logData);
+    } else {
+      console.log('Request:', logData);
+    }
+  });
+
+  // Store response body for logging
+  const originalSend = res.send;
+  res.send = function(body) {
+    res.locals.responseBody = body;
+    return originalSend.call(this, body);
+  };
+
   next();
 });
 
@@ -74,7 +101,7 @@ const swaggerOptions = {
 const swaggerSpec = swaggerJSDoc(swaggerOptions);
 
 // API Documentation
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
 app.use("/api/auth", authRoutes);
