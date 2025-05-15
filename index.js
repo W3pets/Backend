@@ -11,6 +11,9 @@ dotenv.config();
 
 const app = express();
 
+// Parse allowed origins from .env
+const allowedOrigins = (process.env.FRONTEND_URLS || '').split(',').map(url => url.trim()).filter(Boolean);
+
 // Request logging middleware
 app.use((req, res, next) => {
   console.log('\n=== New Request ===');
@@ -22,9 +25,17 @@ app.use((req, res, next) => {
   next();
 });
 
-// CORS configuration - allow all origins
+
 app.use(cors({
-  origin: '*',
+  origin: function(origin, callback) {
+    
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -57,5 +68,5 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-  console.log('CORS is configured to allow all origins');
+  console.log('CORS is configured for these origins:', allowedOrigins);
 }); 
