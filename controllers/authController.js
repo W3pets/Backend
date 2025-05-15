@@ -275,4 +275,120 @@ export const resetPassword = async (req, res) => {
   }
 };
 
-// ... existing login and refresh token functions ... 
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+
+    // Find user by email
+    const user = await db.oneOrNone(
+      "SELECT id, username, email, password, role FROM users WHERE email = $1",
+      [email]
+    );
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // Compare password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // Remove password from user object
+    delete user.password;
+
+    // Generate tokens
+    const accessToken = generateToken(user, "access");
+    const refreshToken = generateToken(user, "refresh");
+
+    // Store refresh token in DB
+    await db.none(
+      `INSERT INTO refresh_tokens (user_id, token)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id) DO UPDATE SET token = EXCLUDED.token`,
+      [user.id, refreshToken]
+    );
+
+    // Set refresh token cookie
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    res.status(200).json({
+      message: "Login successful",
+      accessToken,
+      user,
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Error during login" });
+  }
+};
+
+export const refreshToken = async (req, res) => {
+  try {
+    const token = req.cookies?.refreshToken;
+    if (!token) {
+      return res.status(401).json({ message: "No refresh token provided" });
+    }
+
+    // Verify refresh token
+    let payload;
+    try {
+      payload = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+    } catch (err) {
+      return res.status(401).json({ message: "Invalid or expired refresh token" });
+    }
+
+    // Check if token exists in DB
+    const dbToken = await db.oneOrNone(
+      "SELECT token FROM refresh_tokens WHERE user_id = $1",
+      [payload.id]
+    );
+    if (!dbToken || dbToken.token !== token) {
+      return res.status(401).json({ message: "Refresh token not found or does not match" });
+    }
+
+    // Get user info
+    const user = await db.oneOrNone(
+      "SELECT id, username, email, role FROM users WHERE id = $1",
+      [payload.id]
+    );
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    // Issue new tokens
+    const newAccessToken = generateToken(user, "access");
+    const newRefreshToken = generateToken(user, "refresh");
+
+    // Update refresh token in DB
+    await db.none(
+      `UPDATE refresh_tokens SET token = $1 WHERE user_id = $2`,
+      [newRefreshToken, user.id]
+    );
+
+    // Set new refresh token cookie
+    res.cookie("refreshToken", newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    res.status(200).json({
+      accessToken: newAccessToken,
+      user,
+    });
+  } catch (error) {
+    console.error("Refresh token error:", error);
+    res.status(500).json({ message: "Error refreshing token" });
+  }
+};
+ 
