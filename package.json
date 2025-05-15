@@ -4,7 +4,7 @@
   "description": "This is the repository for the backend development of W3pets.",
   "main": "index.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node index.js",
     "dev": "nodemon server"
   },
   "keywords": [],
