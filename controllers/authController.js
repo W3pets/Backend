@@ -14,10 +14,9 @@ export const signup = async (req, res) => {
     const { username, email, password, redirectUrl } = req.body;
 
     // Check if user already exists
-    const existingUser = await db.oneOrNone(
-      "SELECT * FROM users WHERE email = $1",
-      [email]
-    );
+    const existingUser = await db.user.findUnique({
+      where: { email }
+    });
 
     if (existingUser) {
       return res.status(400).json({
@@ -97,22 +96,33 @@ export const verifyEmail = async (req, res) => {
     }
 
     // Create user in database
-    const newUser = await db.one(
-      `INSERT INTO users (username, email, password, role)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, username, email, role`,
-      [userData.username, userData.email, userData.password, "user"]
-    );
+    const newUser = await db.user.create({
+      data: {
+        username: userData.username,
+        email: userData.email,
+        password: userData.password,
+        role: "user"
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true
+      }
+    });
 
     // Generate tokens
     const accessToken = generateToken(newUser, "access");
     const refreshToken = generateToken(newUser, "refresh");
 
     // Store refresh token
-    await db.none(
-      "INSERT INTO refresh_tokens (user_id, token) VALUES ($1, $2)",
-      [newUser.id, refreshToken]
-    );
+    await db.refreshToken.create({
+      data: {
+        userId: newUser.id,
+        token: refreshToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      }
+    });
 
     // Clear temporary data
     unverifiedUsers.delete(token);
@@ -155,10 +165,13 @@ export const forgotPassword = async (req, res) => {
     const { email } = req.body;
 
     // Check if user exists
-    const user = await db.oneOrNone(
-      "SELECT id, email FROM users WHERE email = $1",
-      [email]
-    );
+    const user = await db.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true
+      }
+    });
 
     if (!user) {
       // Return success even if user doesn't exist for security
@@ -225,26 +238,31 @@ export const resetPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Update user password
-    await db.none("UPDATE users SET password = $1 WHERE id = $2", [
-      hashedPassword,
-      tokenData.userId,
-    ]);
+    await db.user.update({
+      where: { id: tokenData.userId },
+      data: { password: hashedPassword }
+    });
 
     // Get user data for token generation
-    const user = await db.one(
-      "SELECT id, username, email, role FROM users WHERE id = $1",
-      [tokenData.userId]
-    );
+    const user = await db.user.findUnique({
+      where: { id: tokenData.userId },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true
+      }
+    });
 
     // Generate new tokens
     const accessToken = generateToken(user, "access");
     const refreshToken = generateToken(user, "refresh");
 
     // Update refresh token
-    await db.none(
-      "UPDATE refresh_tokens SET token = $1 WHERE user_id = $2",
-      [refreshToken, user.id]
-    );
+    await db.refreshToken.updateMany({
+      where: { userId: user.id },
+      data: { token: refreshToken }
+    });
 
     // Clear reset token
     passwordResetTokens.delete(token);
@@ -283,10 +301,16 @@ export const login = async (req, res) => {
     }
 
     // Find user by email
-    const user = await db.oneOrNone(
-      "SELECT id, username, email, password, role FROM users WHERE email = $1",
-      [email]
-    );
+    const user = await db.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        password: true,
+        role: true
+      }
+    });
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
@@ -305,12 +329,18 @@ export const login = async (req, res) => {
     const refreshToken = generateToken(user, "refresh");
 
     // Store refresh token in DB
-    await db.none(
-      `INSERT INTO refresh_tokens (user_id, token)
-       VALUES ($1, $2)
-       ON CONFLICT (user_id) DO UPDATE SET token = EXCLUDED.token`,
-      [user.id, refreshToken]
-    );
+    await db.refreshToken.upsert({
+      where: { userId: user.id },
+      update: { 
+        token: refreshToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      },
+      create: {
+        userId: user.id,
+        token: refreshToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      }
+    });
 
     // Set refresh token cookie
     res.cookie("refreshToken", refreshToken, {
@@ -347,19 +377,24 @@ export const refreshToken = async (req, res) => {
     }
 
     // Check if token exists in DB
-    const dbToken = await db.oneOrNone(
-      "SELECT token FROM refresh_tokens WHERE user_id = $1",
-      [payload.id]
-    );
+    const dbToken = await db.refreshToken.findUnique({
+      where: { userId: payload.id },
+      select: { token: true }
+    });
     if (!dbToken || dbToken.token !== token) {
       return res.status(401).json({ message: "Refresh token not found or does not match" });
     }
 
     // Get user info
-    const user = await db.oneOrNone(
-      "SELECT id, username, email, role FROM users WHERE id = $1",
-      [payload.id]
-    );
+    const user = await db.user.findUnique({
+      where: { id: payload.id },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true
+      }
+    });
     if (!user) {
       return res.status(401).json({ message: "User not found" });
     }
@@ -369,10 +404,13 @@ export const refreshToken = async (req, res) => {
     const newRefreshToken = generateToken(user, "refresh");
 
     // Update refresh token in DB
-    await db.none(
-      `UPDATE refresh_tokens SET token = $1 WHERE user_id = $2`,
-      [newRefreshToken, user.id]
-    );
+    await db.refreshToken.update({
+      where: { userId: user.id },
+      data: { 
+        token: newRefreshToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      }
+    });
 
     // Set new refresh token cookie
     res.cookie("refreshToken", newRefreshToken, {
@@ -391,4 +429,3 @@ export const refreshToken = async (req, res) => {
     res.status(500).json({ message: "Error refreshing token" });
   }
 };
- 

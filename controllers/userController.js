@@ -266,10 +266,13 @@ export const updateUserProfile = async (req, res) => {
 
     // Check if email is already taken by another user
     if (email) {
-      const existingUser = await db.oneOrNone(
-        "SELECT id FROM users WHERE email = $1 AND id != $2",
-        [email, userId]
-      );
+      const existingUser = await db.user.findFirst({
+        where: {
+          email: email,
+          NOT: { id: userId }
+        },
+        select: { id: true }
+      });
 
       if (existingUser) {
         return res.status(400).json({
