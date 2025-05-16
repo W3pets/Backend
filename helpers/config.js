@@ -1,7 +1,36 @@
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
 import { config as loadEnv, parse } from 'dotenv';
 
-const client = new SecretManagerServiceClient();
+// Initialize GCP client with enhanced error handling
+const client = new SecretManagerServiceClient({
+  credentials: process.env.GOOGLE_APPLICATION_CREDENTIALS
+    ? JSON.parse(Buffer.from(process.env.GOOGLE_APPLICATION_CREDENTIALS, 'base64').toString())
+    : undefined,
+  projectId: process.env.GOOGLE_CLOUD_PROJECT || 'calm-nation-459920'
+});
+
+// Add detailed permission validation
+if (process.env.NODE_ENV === 'production') {
+  console.log('Initializing GCP Secret Manager with:');
+  console.log(`- Project: ${process.env.GOOGLE_CLOUD_PROJECT || 'calm-nation-459920'}`);
+  
+  if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    throw new Error('GOOGLE_APPLICATION_CREDENTIALS environment variable required for production');
+  }
+  
+  try {
+    // Verify credentials can be parsed
+    const credentials = JSON.parse(
+      Buffer.from(process.env.GOOGLE_APPLICATION_CREDENTIALS, 'base64').toString()
+    );
+    
+    if (!credentials.client_email || !credentials.private_key) {
+      throw new Error('Invalid service account credentials format');
+    }
+  } catch (error) {
+    throw new Error(`Failed to parse GCP credentials: ${error.message}`);
+  }
+}
 
 export async function loadConfig() {
   if (process.env.NODE_ENV === 'production') {
