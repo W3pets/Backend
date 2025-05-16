@@ -1,13 +1,14 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
+import { loadConfig } from "./helpers/config.js";
 import swaggerUi from "swagger-ui-express";
 import swaggerJSDoc from "swagger-jsdoc";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import sellerRoutes from "./routes/sellerRoutes.js";
 
-dotenv.config();
+// Load environment variables
+await loadConfig();
 
 const app = express();
 
