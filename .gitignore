@@ -105,4 +105,3 @@ DynamoDBLocal_lib/
 .vscode/
 idea/
 db.sqlite
-app.yaml
