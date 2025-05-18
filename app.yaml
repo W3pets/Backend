@@ -1,6 +1,21 @@
 runtime: nodejs22
 env: standard
 
+env_variables:
+  NODE_ENV: "production"
+  DB_PASSWORD: "projects/375971071151/secrets/DATABASE_URL"
+  FRONTEND_URLS: "projects/375971071151/secrets/FRONTEND_URLS"
+  JWT_SECRET: "projects/375971071151/secrets/JWT_SECRET"
+  SMTP_HOST: "projects/375971071151/secrets/SMTP_HOST"
+  SMTP_PORT: "projects/375971071151/secrets/SMTP_PORT"
+  SMTP_SECURE: "projects/375971071151/secrets/SMTP_SECURE"
+  SMTP_USER: "projects/375971071151/secrets/SMTP_USER"
+  SMTP_PASS: "projects/375971071151/secrets/SMTP_PASS"
+  AWS_REGION: "projects/375971071151/secrets/AWS_REGION"
+  AWS_ACCESS_KEY_ID: "projects/375971071151/secrets/AWS_ACCESS_KEY_ID"
+  AWS_SECRET_ACCESS_KEY: "projects/375971071151/secrets/AWS_SECRET_ACCESS_KEY"
+  AWS_S3_BUCKET: "projects/375971071151/secrets/AWS_S3_BUCKET"
+
 handlers:
   - url: /.*
     script: auto
