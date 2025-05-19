@@ -3,18 +3,18 @@ env: standard
 
 env_variables:
   NODE_ENV: "production"
-  DB_PASSWORD: "projects/375971071151/secrets/DATABASE_URL/latest"
-  FRONTEND_URLS: "projects/375971071151/secrets/FRONTEND_URLS/latest"
-  JWT_SECRET: "projects/375971071151/secrets/JWT_SECRET/latest"
-  SMTP_HOST: "projects/375971071151/secrets/SMTP_HOST/latest"
-  SMTP_PORT: "projects/375971071151/secrets/SMTP_PORT/latest"
-  SMTP_SECURE: "projects/375971071151/secrets/SMTP_SECURE/latest"
-  SMTP_USER: "projects/375971071151/secrets/SMTP_USER/latest"
-  SMTP_PASS: "projects/375971071151/secrets/SMTP_PASS/latest"
-  AWS_REGION: "projects/375971071151/secrets/AWS_REGION/latest"
-  AWS_ACCESS_KEY_ID: "projects/375971071151/secrets/AWS_ACCESS_KEY_ID/latest"
-  AWS_SECRET_ACCESS_KEY: "projects/375971071151/secrets/AWS_SECRET_ACCESS_KEY/latest"
-  AWS_S3_BUCKET: "projects/375971071151/secrets/AWS_S3_BUCKE/latestT"
+  DATABASE_URL: "projects/375971071151/secrets/DATABASE_URL/versions/latest"
+  FRONTEND_URLS: "projects/375971071151/secrets/FRONTEND_URLS/versions/latest"
+  JWT_SECRET: "projects/375971071151/secrets/JWT_SECRET/versions/latest"
+  SMTP_HOST: "projects/375971071151/secrets/SMTP_HOST/versions/latest"
+  SMTP_PORT: "projects/375971071151/secrets/SMTP_PORT/versions/latest"
+  SMTP_SECURE: "projects/375971071151/secrets/SMTP_SECURE/versions/latest"
+  SMTP_USER: "projects/375971071151/secrets/SMTP_USER/versions/latest"
+  SMTP_PASS: "projects/375971071151/secrets/SMTP_PASS/versions/latest"
+  AWS_REGION: "projects/375971071151/secrets/AWS_REGION/versions/latest"
+  AWS_ACCESS_KEY_ID: "projects/375971071151/secrets/AWS_ACCESS_KEY_ID/versions/latest"
+  AWS_SECRET_ACCESS_KEY: "projects/375971071151/secrets/AWS_SECRET_ACCESS_KEY/versions/latest"
+  AWS_S3_BUCKET: "projects/375971071151/secrets/AWS_S3_BUCKET/versions/latest"
 
 handlers:
   - url: /.*
