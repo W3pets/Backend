@@ -11,65 +11,61 @@ const passwordResetTokens = new Map();
 
 export const signup = async (req, res) => {
   try {
-    const { username, email, password, redirectUrl } = req.body;
+    const { username, email, password, phone, redirectUrl } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
 
-    // Check if user already exists
+    // Check if email already exists
     const existingUser = await db.user.findUnique({
       where: { email }
     });
-
     if (existingUser) {
-      return res.status(400).json({
-        message: "User already exists",
-      });
+      return res.status(400).json({ message: "Email already in use" });
     }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Store user data temporarily (for email verification)
+    const userData = {
+      email,
+      password: hashedPassword,
+      phoneNumber: phone || null,
+      role: 'customer',
+      isSeller: false,
+      isVerified: false,
+      redirectUrl
+    };
 
     // Generate verification token
     const verificationToken = generateToken({ email }, "verification");
-    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Store user data temporarily
     unverifiedUsers.set(verificationToken, {
-      username,
-      email,
-      password: hashedPassword,
-      redirectUrl,
-      createdAt: new Date(),
+      ...userData,
+      createdAt: new Date()
     });
-
-    // Create verification link
-    const verificationLink = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
 
     // Send verification email
     await sendEmail({
       to: email,
       subject: "Verify your email",
-      text: `Click here to verify your email: ${verificationLink}`,
       html: `
-        <h1>Welcome to W3Pets!</h1>
-        <p>Please verify your email address by clicking the button below:</p>
-        <a href="${verificationLink}" style="
-          display: inline-block;
-          background-color: #4CAF50;
-          color: white;
-          padding: 12px 24px;
-          text-decoration: none;
-          border-radius: 4px;
-          margin: 20px 0;
-        ">Verify Email</a>
-        <p>This link will expire in 24 hours.</p>
-        <p>If you didn't create an account, you can safely ignore this email.</p>
+        <h1>Welcome to W3pets!</h1>
+        <p>Click the button below to verify your email:</p>
+        <a href="${process.env.BACKEND_URL}/api/auth/verify-email/${verificationToken}" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;">Verify Email</a>
+        <p>If you did not sign up for W3pets, please ignore this email.</p>
       `,
     });
 
-    res.status(200).json({
-      message: "Verification link sent to your email",
+    res.status(201).json({
+      message: "Verification link sent successfully",
+      redirectUrl,
     });
   } catch (error) {
     console.error("Signup error:", error);
-    res.status(500).json({
-      message: error,
-    });
+    res.status(500).json({ message: "Error during signup", error: error.message });
   }
 };
 
@@ -98,16 +94,20 @@ export const verifyEmail = async (req, res) => {
     // Create user in database
     const newUser = await db.user.create({
       data: {
-        username: userData.username,
         email: userData.email,
         password: userData.password,
-        role: "user"
+        phoneNumber: userData.phoneNumber,
+        role: userData.role,
+        isSeller: userData.isSeller,
+        isVerified: true
       },
       select: {
         id: true,
-        username: true,
         email: true,
-        role: true
+        phoneNumber: true,
+        role: true,
+        isSeller: true,
+        isVerified: true
       }
     });
 
@@ -127,35 +127,35 @@ export const verifyEmail = async (req, res) => {
     // Clear temporary data
     unverifiedUsers.delete(token);
 
-    // Set refresh token cookie
+    // Set refresh token cookie with domain
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "Lax",
+      domain: process.env.COOKIE_DOMAIN,
+      path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    // If there's a redirect URL, include it in the response
+    // Prepare response with redirect information
     const response = {
+      success: true,
       message: "Email verified successfully",
       accessToken,
-      user: {
-        id: newUser.id,
-        username: newUser.username,
-        email: newUser.email,
-        role: newUser.role,
-      },
+      user: newUser,
+      redirect: {
+        url: userData.redirectUrl || '/',
+        shouldRedirect: true
+      }
     };
-
-    if (userData.redirectUrl) {
-      response.redirectUrl = userData.redirectUrl;
-    }
 
     res.status(200).json(response);
   } catch (error) {
     console.error("Email verification error:", error);
     res.status(500).json({
+      success: false,
       message: "Error during email verification",
+      error: error.message
     });
   }
 };
@@ -267,11 +267,13 @@ export const resetPassword = async (req, res) => {
     // Clear reset token
     passwordResetTokens.delete(token);
 
-    // Set refresh token cookie
+    // Set refresh token cookie with domain
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "Lax",
+      domain: process.env.COOKIE_DOMAIN,
+      path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -305,10 +307,11 @@ export const login = async (req, res) => {
       where: { email },
       select: {
         id: true,
-        username: true,
         email: true,
         password: true,
-        role: true
+        role: true,
+        isSeller: true,
+        isVerified: true
       }
     });
     if (!user) {
@@ -322,11 +325,11 @@ export const login = async (req, res) => {
     }
 
     // Remove password from user object
-    delete user.password;
+    const { password: _, ...userWithoutPassword } = user;
 
     // Generate tokens
-    const accessToken = generateToken(user, "access");
-    const refreshToken = generateToken(user, "refresh");
+    const accessToken = generateToken(userWithoutPassword, "access");
+    const refreshToken = generateToken(userWithoutPassword, "refresh");
 
     // Store refresh token in DB
     await db.refreshToken.upsert({
@@ -342,22 +345,24 @@ export const login = async (req, res) => {
       }
     });
 
-    // Set refresh token cookie
+    // Set refresh token cookie with domain
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "Lax",
+      domain: process.env.COOKIE_DOMAIN,
+      path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     res.status(200).json({
       message: "Login successful",
       accessToken,
-      user,
+      user: userWithoutPassword,
     });
   } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ message: error });
+    console.error("Login error:", error.message); // Only log error message, not the full error
+    res.status(500).json({ message: "Error during login" });
   }
 };
 
@@ -416,7 +421,9 @@ export const refreshToken = async (req, res) => {
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "Lax",
+      domain: process.env.COOKIE_DOMAIN,
+      path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 

@@ -8,22 +8,35 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  tls: {
+    rejectUnauthorized: false // Only use this in development
+  }
 });
 
 export const sendEmail = async ({ to, subject, text, html }) => {
   try {
-    const info = await transporter.sendMail({
-      from: `"W3Pets" <${process.env.SMTP_USER}>`,
+    const mailOptions = {
+      from: {
+        name: "W3Pets",
+        address: process.env.SMTP_FROM
+      },
       to,
       subject,
       text,
       html,
-    });
+      headers: {
+        "X-Priority": "1",
+        "X-MSMail-Priority": "High",
+        "Importance": "high",
+        "X-Mailer": "W3Pets Mailer"
+      }
+    };
 
+    const info = await transporter.sendMail(mailOptions);
     console.log("Email sent:", info.messageId);
     return info;
   } catch (error) {
-    console.error("Error sending email:", error);
+    console.error("Email sending error:", error.message);
     throw error;
   }
 }; 

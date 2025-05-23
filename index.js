@@ -56,9 +56,11 @@ app.use((req, res, next) => {
 app.use(cors({
   origin: function(origin, callback) {
     if (!origin) return callback(null, true);
+    console.log('Incoming origin:', origin);
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     } else {
+      console.error('Blocked origin:', origin);
       return callback(new Error('Not allowed by CORS'));
     }
   },
@@ -66,6 +68,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
+app.options('*', cors());
 
 // Middleware
 app.use(express.json());
@@ -107,6 +110,17 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/seller", sellerRoutes);
+
+app.get('/', (req, res) => {
+  res.status(200).json({
+    message: "Welcome to W3pets API",
+    documentation: "/docs",
+  });
+});
+
+app.get('/_ah/health', (req, res) => {
+  res.status(200).send('OK');
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
