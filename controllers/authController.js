@@ -11,7 +11,7 @@ const passwordResetTokens = new Map();
 
 export const signup = async (req, res) => {
   try {
-    const { username, email, password, phone, redirectUrl } = req.body;
+    const { email, password, phone, redirectUrl } = req.body;
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required" });
     }
@@ -41,6 +41,13 @@ export const signup = async (req, res) => {
     // Generate verification token
     const verificationToken = generateToken({ email }, "verification");
 
+    // Clean up expired unverified users (older than 7 days)
+    for (const [token, data] of unverifiedUsers.entries()) {
+      if (Date.now() - data.createdAt > 7 * 24 * 60 * 60 * 1000) {
+        unverifiedUsers.delete(token);
+      }
+    }
+
     // Store user data temporarily
     unverifiedUsers.set(verificationToken, {
       ...userData,
@@ -56,6 +63,7 @@ export const signup = async (req, res) => {
         <p>Click the button below to verify your email:</p>
         <a href="${process.env.BACKEND_URL}/api/auth/verify-email/${verificationToken}" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;">Verify Email</a>
         <p>If you did not sign up for W3pets, please ignore this email.</p>
+        <p>This verification link will expire in 7 days.</p>
       `,
     });
 
@@ -64,7 +72,7 @@ export const signup = async (req, res) => {
       redirectUrl,
     });
   } catch (error) {
-    console.error("Signup error:", error);
+    console.error("Signup error:", error.message);
     res.status(500).json({ message: "Error during signup", error: error.message });
   }
 };
@@ -248,9 +256,10 @@ export const resetPassword = async (req, res) => {
       where: { id: tokenData.userId },
       select: {
         id: true,
-        username: true,
         email: true,
-        role: true
+        role: true,
+        isSeller: true,
+        isVerified: true
       }
     });
 
@@ -282,9 +291,10 @@ export const resetPassword = async (req, res) => {
       accessToken,
       user: {
         id: user.id,
-        username: user.username,
         email: user.email,
         role: user.role,
+        isSeller: user.isSeller,
+        isVerified: user.isVerified
       },
     });
   } catch (error) {
@@ -316,6 +326,13 @@ export const login = async (req, res) => {
     });
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // Check if email is verified
+    if (!user.isVerified) {
+      return res.status(401).json({ 
+        message: "Please verify your email before logging in. Check your inbox for the verification link." 
+      });
     }
 
     // Compare password
@@ -395,9 +412,10 @@ export const refreshToken = async (req, res) => {
       where: { id: payload.id },
       select: {
         id: true,
-        username: true,
         email: true,
-        role: true
+        role: true,
+        isSeller: true,
+        isVerified: true
       }
     });
     if (!user) {
@@ -432,7 +450,7 @@ export const refreshToken = async (req, res) => {
       user,
     });
   } catch (error) {
-    console.error("Refresh token error:", error);
+    console.error("Refresh token error:", error.message);
     res.status(500).json({ message: "Error refreshing token" });
   }
 };
