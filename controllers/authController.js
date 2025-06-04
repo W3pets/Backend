@@ -61,7 +61,7 @@ export const signup = async (req, res) => {
       html: `
         <h1>Welcome to W3pets!</h1>
         <p>Click the button below to verify your email:</p>
-        <a href="${process.env.BACKEND_URL}/api/auth/verify-email/${verificationToken}" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;">Verify Email</a>
+        <a href="${process.env.FRONTEND_URL}/api/auth/verify-email/${verificationToken}" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;">Verify Email</a>
         <p>If you did not sign up for W3pets, please ignore this email.</p>
         <p>This verification link will expire in 7 days.</p>
       `,
@@ -90,8 +90,8 @@ export const verifyEmail = async (req, res) => {
       });
     }
 
-    // Check if token is expired (24 hours)
-    const isExpired = Date.now() - userData.createdAt > 24 * 60 * 60 * 1000;
+    // Check if token is expired (7 days)
+    const isExpired = Date.now() - userData.createdAt > 7 * 24 * 60 * 60 * 1000;
     if (isExpired) {
       unverifiedUsers.delete(token);
       return res.status(400).json({
@@ -139,25 +139,23 @@ export const verifyEmail = async (req, res) => {
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "Lax",
+      sameSite: "false",
       domain: process.env.COOKIE_DOMAIN,
       path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    // Prepare response with redirect information
-    const response = {
+    // Return success response with redirect information
+    res.status(200).json({
       success: true,
       message: "Email verified successfully",
       accessToken,
       user: newUser,
       redirect: {
-        url: userData.redirectUrl || '/',
+        url: "/u/auth/verification_notification",
         shouldRedirect: true
       }
-    };
-
-    res.status(200).json(response);
+    });
   } catch (error) {
     console.error("Email verification error:", error);
     res.status(500).json({
@@ -350,7 +348,9 @@ export const login = async (req, res) => {
 
     // Store refresh token in DB
     await db.refreshToken.upsert({
-      where: { userId: user.id },
+      where: { 
+        userId: user.id 
+      },
       update: { 
         token: refreshToken,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
