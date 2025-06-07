@@ -136,12 +136,13 @@ export const verifyEmail = async (req, res) => {
       }
     });
 
-    // Clear temporary data
-    unverifiedUsers.delete(token);
+    // // Clear temporary data
+    // unverifiedUsers.delete(token);
 
     // Set refresh token cookie with domain
     const domain = isProduction ? PROD_CLIENT_ORIGIN : DEV_CLIENT_ORIGIN;
-    const cookieDomain = domain.split("//")[1];
+    const cookieDomain = domain.split("//")[1].split(":")[0];
+
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: isProduction,
@@ -152,16 +153,7 @@ export const verifyEmail = async (req, res) => {
     });
 
     // Return success response with redirect information
-    res.status(200).json({
-      success: true,
-      message: "Email verified successfully",
-      accessToken,
-      user: newUser,
-      redirect: {
-        url: `${domain}${userData.redirectUrl}?token=${token}}`,
-        shouldRedirect: true
-      }
-    });
+    res.redirect(`${domain}${userData.redirectUrl}?token=${accessToken}}`);
   } catch (error) {
     console.error("Email verification error:", error);
     res.status(500).json({
@@ -227,6 +219,7 @@ export const forgotPassword = async (req, res) => {
 export const resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
+
 
     // Get token data
     const tokenData = passwordResetTokens.get(token);

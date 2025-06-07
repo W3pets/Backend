@@ -129,14 +129,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/seller", sellerRoutes);
 
-app.get('/', async (req, res) => {
-  const user = await db.user.findUnique({
-    where: {
-      email: 'yotstack@gmail.com'
-    }
-  })
+app.get('/delete_all', async (req, res) => {
+  const user = await db.user.deleteMany()
   res.status(200).json({
-    message: user?.email,
     documentation: "/docs",
   });
 });
