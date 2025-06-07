@@ -4,6 +4,9 @@ import { db } from "../helpers/db.js";
 import { sendEmail } from "../helpers/email.js";
 import { generateToken } from "../helpers/utils.js";
 
+const isProduction = process.env.NODE_ENV === "production";
+const { DEV_CLIENT_ORIGIN, PROD_CLIENT_ORIGIN } = process.env;
+
 // Temporary storage for unverified users
 const unverifiedUsers = new Map();
 // Temporary storage for password reset tokens
@@ -55,13 +58,14 @@ export const signup = async (req, res) => {
     });
 
     // Send verification email
+    const host = `${req.protocol}://${req.get('host')}`
     await sendEmail({
       to: email,
       subject: "Verify your email",
       html: `
         <h1>Welcome to W3pets!</h1>
         <p>Click the button below to verify your email:</p>
-        <a href="${process.env.FRONTEND_URL}/api/auth/verify-email/${verificationToken}" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;">Verify Email</a>
+        <a href="${host}/api/auth/verify-email/${verificationToken}" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;">Verify Email</a>
         <p>If you did not sign up for W3pets, please ignore this email.</p>
         <p>This verification link will expire in 7 days.</p>
       `,
@@ -136,11 +140,13 @@ export const verifyEmail = async (req, res) => {
     unverifiedUsers.delete(token);
 
     // Set refresh token cookie with domain
+    const domain = isProduction ? PROD_CLIENT_ORIGIN : DEV_CLIENT_ORIGIN;
+    const cookieDomain = domain.split("//")[1];
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "false",
-      domain: process.env.COOKIE_DOMAIN,
+      secure: isProduction,
+      sameSite: "Lax",
+      domain: cookieDomain,
       path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -152,7 +158,7 @@ export const verifyEmail = async (req, res) => {
       accessToken,
       user: newUser,
       redirect: {
-        url: "/u/auth/verification_notification",
+        url: `${domain}${userData.redirectUrl}?token=${token}}`,
         shouldRedirect: true
       }
     });
@@ -328,8 +334,8 @@ export const login = async (req, res) => {
 
     // Check if email is verified
     if (!user.isVerified) {
-      return res.status(401).json({ 
-        message: "Please verify your email before logging in. Check your inbox for the verification link." 
+      return res.status(401).json({
+        message: "Please verify your email before logging in. Check your inbox for the verification link."
       });
     }
 
@@ -348,10 +354,10 @@ export const login = async (req, res) => {
 
     // Store refresh token in DB
     await db.refreshToken.upsert({
-      where: { 
-        userId: user.id 
+      where: {
+        userId: user.id
       },
-      update: { 
+      update: {
         token: refreshToken,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
       },
@@ -429,7 +435,7 @@ export const refreshToken = async (req, res) => {
     // Update refresh token in DB
     await db.refreshToken.update({
       where: { userId: user.id },
-      data: { 
+      data: {
         token: newRefreshToken,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
       }

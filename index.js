@@ -6,13 +6,17 @@ import swaggerJSDoc from "swagger-jsdoc";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import sellerRoutes from "./routes/sellerRoutes.js";
+import cookieParser from "cookie-parser";
+import { db } from "./helpers/db.js";
+
 
 dotenv.config();
 
 const app = express();
 
 // Parse allowed origins from .env
-const allowedOrigins = (process.env.FRONTEND_URLS || '').split(',').map(url => url.trim()).filter(Boolean);
+const allowedOrigins = process.env.ALLOWED_ORIGINS.split(',');
+const isProduction = process.env.NODE_ENV === "production";
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -31,7 +35,8 @@ app.use((req, res, next) => {
       requestBody: req.body && Object.keys(req.body).length > 0 ? req.body : undefined,
       responseBody: res.locals.responseBody || undefined
     };
-    
+
+
     // Log different levels based on status code
     if (res.statusCode >= 500) {
       console.error('Server Error:', logData);
@@ -44,7 +49,7 @@ app.use((req, res, next) => {
 
   // Store response body for logging
   const originalSend = res.send;
-  res.send = function(body) {
+  res.send = function (body) {
     res.locals.responseBody = body;
     return originalSend.call(this, body);
   };
@@ -52,15 +57,20 @@ app.use((req, res, next) => {
   next();
 });
 
+
+
+// Middleware
+app.use(cookieParser())
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // CORS configuration - support multiple origins
 app.use(cors({
-  origin: function(origin, callback) {
+  origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    console.log('Incoming origin:', origin);
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     } else {
-      console.error('Blocked origin:', origin);
       return callback(new Error('Not allowed by CORS'));
     }
   },
@@ -68,11 +78,19 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
-app.options('*', cors());
-
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.options('*', cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
 
 // Swagger JSDoc setup
 const swaggerOptions = {
@@ -111,9 +129,14 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/seller", sellerRoutes);
 
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
+  const user = await db.user.findUnique({
+    where: {
+      email: 'yotstack@gmail.com'
+    }
+  })
   res.status(200).json({
-    message: "Welcome to W3pets API",
+    message: user?.email,
     documentation: "/docs",
   });
 });
@@ -124,18 +147,13 @@ app.get('/_ah/health', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('\n=== Error ===');
-  console.error(err.stack);
-  console.error('=============\n');
-  
   res.status(500).json({
     message: "Something went wrong!",
-    error: process.env.NODE_ENV === "development" ? err.message : undefined,
+    error: !isProduction ? err.message : undefined,
   });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-  console.log('CORS is configured for these origins:', allowedOrigins);
 }); 
