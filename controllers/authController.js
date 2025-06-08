@@ -362,11 +362,14 @@ export const login = async (req, res) => {
     });
 
     // Set refresh token cookie with domain
+    const domain = isProduction ? PROD_CLIENT_ORIGIN : DEV_CLIENT_ORIGIN;
+    const cookieDomain = domain.split("//")[1].split(":")[0];
+
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isProduction,
       sameSite: "Lax",
-      domain: process.env.COOKIE_DOMAIN,
+      domain: cookieDomain,
       path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
