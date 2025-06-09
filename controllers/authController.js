@@ -6,6 +6,9 @@ import { generateToken } from "../helpers/utils.js";
 
 const isProduction = process.env.NODE_ENV === "production";
 const { DEV_CLIENT_ORIGIN, PROD_CLIENT_ORIGIN } = process.env;
+const domain = isProduction ? PROD_CLIENT_ORIGIN : DEV_CLIENT_ORIGIN;
+const cookieDomain = domain.split("//")[1].split(":")[0];
+const cookieExpRange = 7 * 24 * 60 * 60 * 1000
 
 // Temporary storage for unverified users
 const unverifiedUsers = new Map();
@@ -124,7 +127,6 @@ export const verifyEmail = async (req, res) => {
     });
 
     // Generate tokens
-    const accessToken = generateToken(newUser, "access");
     const refreshToken = generateToken(newUser, "refresh");
 
     // Store refresh token
@@ -140,8 +142,6 @@ export const verifyEmail = async (req, res) => {
     // unverifiedUsers.delete(token);
 
     // Set refresh token cookie with domain
-    const domain = isProduction ? PROD_CLIENT_ORIGIN : DEV_CLIENT_ORIGIN;
-    const cookieDomain = domain.split("//")[1].split(":")[0];
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
@@ -153,7 +153,7 @@ export const verifyEmail = async (req, res) => {
     });
 
     // Return success response with redirect information
-    res.redirect(`${domain}${userData.redirectUrl}?token=${accessToken}}`);
+    res.redirect(`${domain}${userData.redirectUrl}`);
   } catch (error) {
     console.error("Email verification error:", error);
     res.status(500).json({
@@ -192,7 +192,8 @@ export const forgotPassword = async (req, res) => {
     });
 
     // Send reset email
-    const resetLink = `${process.env.FRONTEND_URL}/forgot_reset/${resetToken}`;
+    const host = `${req.protocol}://${req.get('host')}`
+    const resetLink = `${host}/forgot_reset/${resetToken}`;
     await sendEmail({
       to: email,
       subject: "Reset your password",
@@ -231,7 +232,7 @@ export const resetPassword = async (req, res) => {
     }
 
     // Check if token is expired (1 hour)
-    const isExpired = Date.now() - tokenData.createdAt > 60 * 60 * 1000;
+    const isExpired = Date.now() - tokenData.createdAt > cookieExpRange;
     if (isExpired) {
       passwordResetTokens.delete(token);
       return res.status(400).json({
@@ -276,9 +277,9 @@ export const resetPassword = async (req, res) => {
     // Set refresh token cookie with domain
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isProduction,
       sameSite: "Lax",
-      domain: process.env.COOKIE_DOMAIN,
+      domain: cookieDomain,
       path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -344,34 +345,30 @@ export const login = async (req, res) => {
     // Generate tokens
     const accessToken = generateToken(userWithoutPassword, "access");
     const refreshToken = generateToken(userWithoutPassword, "refresh");
-
     // Store refresh token in DB
     await db.refreshToken.upsert({
       where: {
-        userId: user.id
+        id: user.id
       },
       update: {
         token: refreshToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+        expiresAt: new Date(Date.now() + cookieExpRange) // 7 days
       },
       create: {
         userId: user.id,
         token: refreshToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+        expiresAt: new Date(Date.now() + cookieExpRange) // 7 days
       }
     });
 
     // Set refresh token cookie with domain
-    const domain = isProduction ? PROD_CLIENT_ORIGIN : DEV_CLIENT_ORIGIN;
-    const cookieDomain = domain.split("//")[1].split(":")[0];
-
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: isProduction,
       sameSite: "Lax",
       domain: cookieDomain,
       path: "/",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: cookieExpRange, // 7 days
     });
 
     res.status(200).json({
@@ -391,18 +388,17 @@ export const refreshToken = async (req, res) => {
     if (!token) {
       return res.status(401).json({ message: "No refresh token provided" });
     }
-
     // Verify refresh token
     let payload;
     try {
-      payload = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+      payload = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
     } catch (err) {
       return res.status(401).json({ message: "Invalid or expired refresh token" });
     }
 
     // Check if token exists in DB
     const dbToken = await db.refreshToken.findUnique({
-      where: { userId: payload.id },
+      where: { userId: payload.id, token: token },
       select: { token: true }
     });
     if (!dbToken || dbToken.token !== token) {
@@ -429,22 +425,23 @@ export const refreshToken = async (req, res) => {
     const newRefreshToken = generateToken(user, "refresh");
 
     // Update refresh token in DB
-    await db.refreshToken.update({
-      where: { userId: user.id },
+    await prisma.refreshToken.deleteMany({ where: { userId: user.id } })
+    await db.refreshToken.create({
       data: {
+        userId: user.id,
         token: newRefreshToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+        expiresAt: new Date(Date.now() + cookieExpRange) // 7 days
       }
     });
 
     // Set new refresh token cookie
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isProduction,
       sameSite: "Lax",
-      domain: process.env.COOKIE_DOMAIN,
+      domain: cookieDomain,
       path: "/",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: cookieExpRange, // 7 days
     });
 
     res.status(200).json({

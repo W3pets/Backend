@@ -58,7 +58,6 @@ app.use((req, res, next) => {
 });
 
 
-
 // Middleware
 app.use(cookieParser())
 app.use(express.json());
@@ -130,7 +129,11 @@ app.use("/api/users", userRoutes);
 app.use("/api/seller", sellerRoutes);
 
 app.get('/delete_all', async (req, res) => {
-  const user = await db.user.deleteMany()
+  const user = await db.user.delete({
+    where: {
+      email: '',
+    },
+  })
   res.status(200).json({
     documentation: "/docs",
   });
