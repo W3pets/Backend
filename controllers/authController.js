@@ -192,8 +192,7 @@ export const forgotPassword = async (req, res) => {
     });
 
     // Send reset email
-    const host = `${req.protocol}://${req.get('host')}`
-    const resetLink = `${host}/forgot_reset/${resetToken}`;
+    const resetLink = `${domain}/u/auth/forgot_reset/${resetToken}`;
     await sendEmail({
       to: email,
       subject: "Reset your password",
@@ -265,10 +264,14 @@ export const resetPassword = async (req, res) => {
     const accessToken = generateToken(user, "access");
     const refreshToken = generateToken(user, "refresh");
 
-    // Update refresh token
-    await db.refreshToken.updateMany({
-      where: { userId: user.id },
-      data: { token: refreshToken }
+    // Update refresh token - first delete existing tokens, then create new one
+    await db.refreshToken.deleteMany({ where: { userId: user.id } });
+    await db.refreshToken.create({
+      data: {
+        userId: user.id,
+        token: refreshToken,
+        expiresAt: new Date(Date.now() + cookieExpRange) // 7 days
+      }
     });
 
     // Clear reset token
@@ -425,7 +428,7 @@ export const refreshToken = async (req, res) => {
     const newRefreshToken = generateToken(user, "refresh");
 
     // Update refresh token in DB
-    await prisma.refreshToken.deleteMany({ where: { userId: user.id } })
+    await db.refreshToken.deleteMany({ where: { userId: user.id } });
     await db.refreshToken.create({
       data: {
         userId: user.id,
