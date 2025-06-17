@@ -7,8 +7,21 @@ import { generateToken } from "../helpers/utils.js";
 const isProduction = process.env.NODE_ENV === "production";
 const { DEV_CLIENT_ORIGIN, PROD_CLIENT_ORIGIN } = process.env;
 const domain = isProduction ? PROD_CLIENT_ORIGIN : DEV_CLIENT_ORIGIN;
-const cookieDomain = domain.split("//")[1].split(":")[0];
-const cookieExpRange = 7 * 24 * 60 * 60 * 1000
+
+// More robust cookie domain extraction
+const getCookieDomain = (url) => {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname;
+  } catch (e) {
+    // Fallback to simple domain extraction if URL parsing fails
+    return url.replace(/^https?:\/\//, '').split(':')[0].split('/')[0];
+  }
+};
+
+// In production, we need to set the cookie domain to the backend domain
+const cookieDomain = isProduction ? 'w3pets.nw.r.appspot.com' : getCookieDomain(domain);
+const cookieExpRange = 7 * 24 * 60 * 60 * 1000;
 
 // Temporary storage for unverified users
 const unverifiedUsers = new Map();
@@ -129,24 +142,21 @@ export const verifyEmail = async (req, res) => {
     // Generate tokens
     const refreshToken = generateToken(newUser, "refresh");
 
-    // Store refresh token
+    // Store refresh token - first delete any existing tokens, then create new one
+    await db.refreshToken.deleteMany({ where: { userId: newUser.id } });
     await db.refreshToken.create({
       data: {
         userId: newUser.id,
         token: refreshToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+        expiresAt: new Date(Date.now() + cookieExpRange) // 7 days
       }
     });
 
-    // // Clear temporary data
-    // unverifiedUsers.delete(token);
-
     // Set refresh token cookie with domain
-
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: "Lax",
+      secure: true,
+      sameSite: "None",
       domain: cookieDomain,
       path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
@@ -280,11 +290,11 @@ export const resetPassword = async (req, res) => {
     // Set refresh token cookie with domain
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: "Lax",
+      secure: true,
+      sameSite: "None",
       domain: cookieDomain,
       path: "/",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: cookieExpRange,
     });
 
     res.status(200).json({
@@ -348,16 +358,11 @@ export const login = async (req, res) => {
     // Generate tokens
     const accessToken = generateToken(userWithoutPassword, "access");
     const refreshToken = generateToken(userWithoutPassword, "refresh");
-    // Store refresh token in DB
-    await db.refreshToken.upsert({
-      where: {
-        id: user.id
-      },
-      update: {
-        token: refreshToken,
-        expiresAt: new Date(Date.now() + cookieExpRange) // 7 days
-      },
-      create: {
+    
+    // Store refresh token in DB - first delete existing tokens, then create new one
+    await db.refreshToken.deleteMany({ where: { userId: user.id } });
+    await db.refreshToken.create({
+      data: {
         userId: user.id,
         token: refreshToken,
         expiresAt: new Date(Date.now() + cookieExpRange) // 7 days
@@ -367,11 +372,11 @@ export const login = async (req, res) => {
     // Set refresh token cookie with domain
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: "Lax",
+      secure: true,
+      sameSite: "None",
       domain: cookieDomain,
       path: "/",
-      maxAge: cookieExpRange, // 7 days
+      maxAge: cookieExpRange,
     });
 
     res.status(200).json({
@@ -440,11 +445,11 @@ export const refreshToken = async (req, res) => {
     // Set new refresh token cookie
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: "Lax",
+      secure: true,
+      sameSite: "None",
       domain: cookieDomain,
       path: "/",
-      maxAge: cookieExpRange, // 7 days
+      maxAge: cookieExpRange,
     });
 
     res.status(200).json({
