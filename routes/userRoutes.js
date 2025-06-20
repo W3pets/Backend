@@ -10,6 +10,50 @@ const router = express.Router();
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     User:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: The user's unique ID.
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: The user's email address.
+ *         name:
+ *           type: string
+ *           description: The user's full name.
+ *         phoneNumber:
+ *           type: string
+ *           description: The user's phone number.
+ *         role:
+ *           type: string
+ *           description: The user's role (e.g., 'customer', 'seller').
+ *         isSeller:
+ *           type: boolean
+ *           description: Flag indicating if the user is a seller.
+ *         isVerified:
+ *           type: boolean
+ *           description: Flag indicating if the user's email is verified.
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: The timestamp of when the user was created.
+ *     UserInput:
+ *       type: object
+ *       properties:
+ *         name:
+ *           type: string
+ *           description: The user's full name.
+ *         phoneNumber:
+ *           type: string
+ *           description: The user's phone number.
+ */
+
+/**
+ * @swagger
  * tags:
  *   name: Users
  *   description: User profile management endpoints
@@ -30,16 +74,7 @@ const router = express.Router();
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 id:
- *                   type: number
- *                 username:
- *                   type: string
- *                 email:
- *                   type: string
- *                 role:
- *                   type: string
+ *               $ref: '#/components/schemas/User'
  *       401:
  *         description: Not authenticated
  *       500:
@@ -61,15 +96,7 @@ router.get("/profile", loginRequired, getUserProfile);
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               username:
- *                 type: string
- *                 description: New username
- *               email:
- *                 type: string
- *                 format: email
- *                 description: New email address
+ *             $ref: '#/components/schemas/UserInput'
  *     responses:
  *       200:
  *         description: Profile updated successfully
@@ -81,16 +108,7 @@ router.get("/profile", loginRequired, getUserProfile);
  *                 message:
  *                   type: string
  *                 user:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: number
- *                     username:
- *                       type: string
- *                     email:
- *                       type: string
- *                     role:
- *                       type: string
+ *                   $ref: '#/components/schemas/User'
  *       401:
  *         description: Not authenticated
  *       500:

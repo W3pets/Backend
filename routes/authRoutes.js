@@ -31,13 +31,9 @@ const router = express.Router();
  *           schema:
  *             type: object
  *             required:
- *               - username
  *               - email
  *               - password
  *             properties:
- *               username:
- *                 type: string
- *                 description: User's username
  *               email:
  *                 type: string
  *                 format: email
@@ -46,12 +42,15 @@ const router = express.Router();
  *                 type: string
  *                 format: password
  *                 description: User's password
+ *               phone:
+ *                 type: string
+ *                 description: User's phone number (optional)
  *               redirectUrl:
  *                 type: string
- *                 description: URL to redirect to after email verification
+ *                 description: URL to redirect to after email verification.
  *     responses:
- *       200:
- *         description: Verification link sent successfully
+ *       201:
+ *         description: Verification link sent successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -59,9 +58,11 @@ const router = express.Router();
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Verification link sent to your email
+ *                   example: Verification link sent successfully
+ *                 redirectUrl:
+ *                   type: string
  *       400:
- *         description: User already exists
+ *         description: Bad request (e.g., email already in use)
  *       500:
  *         description: Server error
  */
@@ -71,8 +72,8 @@ router.post("/signup", signup);
  * @swagger
  * /api/auth/verify-email/{token}:
  *   get:
- *     summary: Verify user's email
- *     description: Verifies user's email using verification link
+ *     summary: Verify user's email and log them in
+ *     description: Verifies a user's email via a token sent to their inbox. On success, it creates the user, sets a `refreshToken` httpOnly cookie, and redirects them to the provided `redirectUrl` from the signup phase.
  *     tags: [Authentication]
  *     parameters:
  *       - in: path
@@ -80,37 +81,14 @@ router.post("/signup", signup);
  *         required: true
  *         schema:
  *           type: string
- *         description: Email verification token
+ *         description: Email verification token.
  *     responses:
- *       200:
- *         description: Email verified successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 accessToken:
- *                   type: string
- *                 user:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: number
- *                     username:
- *                       type: string
- *                     email:
- *                       type: string
- *                     role:
- *                       type: string
- *                 redirectUrl:
- *                   type: string
- *                   description: URL to redirect to after verification
+ *       302:
+ *         description: Redirects to the application's frontend upon successful verification. The response will include a `Set-Cookie` header for the `refreshToken`.
  *       400:
- *         description: Invalid or expired verification link
+ *         description: Invalid or expired verification link.
  *       500:
- *         description: Server error
+ *         description: Server error.
  */
 router.get("/verify-email/:token", verifyEmail);
 
@@ -119,7 +97,7 @@ router.get("/verify-email/:token", verifyEmail);
  * /api/auth/login:
  *   post:
  *     summary: Login user
- *     description: Authenticates user and returns access token
+ *     description: Authenticates a user and returns an access token and user information. It also sets a `refreshToken` in an httpOnly cookie.
  *     tags: [Authentication]
  *     requestBody:
  *       required: true
@@ -141,7 +119,7 @@ router.get("/verify-email/:token", verifyEmail);
  *                 description: User's password
  *     responses:
  *       200:
- *         description: Login successful
+ *         description: Login successful. The response includes an `accessToken` and user details, and a `refreshToken` is set as an httpOnly cookie.
  *         content:
  *           application/json:
  *             schema:
@@ -152,18 +130,9 @@ router.get("/verify-email/:token", verifyEmail);
  *                 accessToken:
  *                   type: string
  *                 user:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: number
- *                     username:
- *                       type: string
- *                     email:
- *                       type: string
- *                     role:
- *                       type: string
+ *                   $ref: '#/components/schemas/User'
  *       401:
- *         description: Invalid credentials
+ *         description: Invalid credentials or email not verified.
  *       500:
  *         description: Server error
  */
@@ -174,13 +143,11 @@ router.post("/login", login);
  * /api/auth/refresh-token:
  *   post:
  *     summary: Refresh access token
- *     description: Generates new access token using refresh token
+ *     description: Generates a new access token and a new refresh token. The new refresh token is sent back in an httpOnly cookie.
  *     tags: [Authentication]
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Token refreshed successfully
+ *         description: Token refreshed successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -188,8 +155,10 @@ router.post("/login", login);
  *               properties:
  *                 accessToken:
  *                   type: string
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
  *       401:
- *         description: Invalid refresh token
+ *         description: No refresh token provided, or the token is invalid/expired.
  *       500:
  *         description: Server error
  */
@@ -235,7 +204,7 @@ router.post("/forgot-password", forgotPassword);
  * /api/auth/reset-password:
  *   post:
  *     summary: Reset password
- *     description: Resets user's password using reset token
+ *     description: Resets a user's password using a valid reset token. On success, it returns new tokens and user info, similar to login.
  *     tags: [Authentication]
  *     requestBody:
  *       required: true
@@ -256,7 +225,7 @@ router.post("/forgot-password", forgotPassword);
  *                 description: New password
  *     responses:
  *       200:
- *         description: Password reset successful
+ *         description: Password reset successful.
  *         content:
  *           application/json:
  *             schema:
@@ -267,18 +236,9 @@ router.post("/forgot-password", forgotPassword);
  *                 accessToken:
  *                   type: string
  *                 user:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: number
- *                     username:
- *                       type: string
- *                     email:
- *                       type: string
- *                     role:
- *                       type: string
+ *                   $ref: '#/components/schemas/User'
  *       400:
- *         description: Invalid or expired token
+ *         description: Invalid or expired token.
  *       500:
  *         description: Server error
  */

@@ -13,6 +13,91 @@ const router = express.Router();
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     SellerOnboardingInput:
+ *       type: object
+ *       required:
+ *         - business_name
+ *         - contact_phone
+ *         - business_address
+ *         - city
+ *         - state
+ *         - product_title
+ *         - product_category
+ *         - product_breed
+ *         - age
+ *         - quantity
+ *         - weight
+ *         - price
+ *         - gender
+ *         - product_photos
+ *       properties:
+ *         business_name:
+ *           type: string
+ *           description: Name of the business
+ *         contact_phone:
+ *           type: string
+ *           description: Business contact phone number
+ *         business_address:
+ *           type: string
+ *           description: Business address
+ *         city:
+ *           type: string
+ *           description: City where business is located
+ *         state:
+ *           type: string
+ *           description: State where business is located
+ *         location_coords:
+ *           type: object
+ *           properties:
+ *             lat:
+ *               type: number
+ *             lng:
+ *               type: number
+ *         seller_uniqueness:
+ *           type: string
+ *           description: What makes the seller unique
+ *         brand_image:
+ *           type: string
+ *           format: binary
+ *           description: Brand image/logo file
+ *         product_title:
+ *           type: string
+ *           description: Title of the product
+ *         product_category:
+ *           type: string
+ *           description: Category of the product
+ *         product_breed:
+ *           type: string
+ *           description: Breed of the animal
+ *         age:
+ *           type: string
+ *           description: Age of the animal
+ *         quantity:
+ *           type: number
+ *           description: Available quantity
+ *         weight:
+ *           type: number
+ *           description: Weight of the animal
+ *         price:
+ *           type: number
+ *           description: Price in Naira
+ *         gender:
+ *           type: string
+ *           description: Gender of the animal
+ *         product_photos:
+ *           type: array
+ *           items:
+ *             type: string
+ *             format: binary
+ *           description: Array of product photo files (up to 5)
+ *         product_video:
+ *           type: string
+ *           format: binary
+ *           description: Product video file (max 20MB)
+ *
+ * @swagger
  * /api/seller/dashboard/stats:
  *   get:
  *     summary: Get seller dashboard statistics
@@ -66,27 +151,7 @@ router.get("/dashboard/stats", loginRequired, sellerRequired, getDashboardStats)
  *             schema:
  *               type: array
  *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: number
- *                   title:
- *                     type: string
- *                   price:
- *                     type: number
- *                   category:
- *                     type: string
- *                   breed:
- *                     type: string
- *                   age:
- *                     type: string
- *                   gender:
- *                     type: string
- *                   imageUrl:
- *                     type: string
- *                   status:
- *                     type: string
- *                     enum: [active, inactive, sold]
+ *                 $ref: '#/components/schemas/Product'
  *       401:
  *         description: Not authenticated
  *       403:
@@ -186,26 +251,7 @@ router.put("/listings/:id/edit", loginRequired, sellerRequired, updateListing);
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 id:
- *                   type: number
- *                 title:
- *                   type: string
- *                 price:
- *                   type: number
- *                 category:
- *                   type: string
- *                 breed:
- *                   type: string
- *                 age:
- *                   type: string
- *                 gender:
- *                   type: string
- *                 imageUrl:
- *                   type: string
- *                 status:
- *                   type: string
+ *                $ref: '#/components/schemas/Product'
  *       401:
  *         description: Not authenticated
  *       403:
@@ -231,89 +277,10 @@ router.get("/listings/:id/preview", loginRequired, sellerRequired, getListingPre
  *       content:
  *         multipart/form-data:
  *           schema:
- *             type: object
- *             required:
- *               - business_name
- *               - contact_phone
- *               - business_address
- *               - city
- *               - state
- *               - product_title
- *               - product_category
- *               - product_breed
- *               - age
- *               - quantity
- *               - weight
- *               - price
- *               - gender
- *               - product_photos
- *             properties:
- *               business_name:
- *                 type: string
- *                 description: Name of the business
- *               contact_phone:
- *                 type: string
- *                 description: Business contact phone number
- *               business_address:
- *                 type: string
- *                 description: Business address
- *               city:
- *                 type: string
- *                 description: City where business is located
- *               state:
- *                 type: string
- *                 description: State where business is located
- *               location_coords:
- *                 type: object
- *                 properties:
- *                   lat:
- *                     type: number
- *                   lng:
- *                     type: number
- *               seller_uniqueness:
- *                 type: string
- *                 description: What makes the seller unique
- *               brand_image:
- *                 type: string
- *                 format: binary
- *                 description: Brand image/logo file
- *               product_title:
- *                 type: string
- *                 description: Title of the product
- *               product_category:
- *                 type: string
- *                 description: Category of the product
- *               product_breed:
- *                 type: string
- *                 description: Breed of the animal
- *               age:
- *                 type: string
- *                 description: Age of the animal
- *               quantity:
- *                 type: number
- *                 description: Available quantity
- *               weight:
- *                 type: number
- *                 description: Weight of the animal
- *               price:
- *                 type: number
- *                 description: Price in Naira
- *               gender:
- *                 type: string
- *                 description: Gender of the animal
- *               product_photos:
- *                 type: array
- *                 items:
- *                   type: string
- *                   format: binary
- *                 description: Array of product photo files
- *               product_video:
- *                 type: string
- *                 format: binary
- *                 description: Product video file (max 20MB)
+ *             $ref: '#/components/schemas/SellerOnboardingInput'
  *     responses:
  *       200:
- *         description: Seller onboarding completed successfully
+ *         description: Seller onboarding completed successfully. Returns the new seller and product information.
  *         content:
  *           application/json:
  *             schema:
@@ -321,8 +288,10 @@ router.get("/listings/:id/preview", loginRequired, sellerRequired, getListingPre
  *               properties:
  *                 message:
  *                   type: string
- *                 sellerId:
- *                   type: number
+ *                 seller:
+ *                   $ref: '#/components/schemas/User'
+ *                 product:
+ *                   $ref: '#/components/schemas/Product'
  *       400:
  *         description: Missing required fields or invalid file types
  *       401:

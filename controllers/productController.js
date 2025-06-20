@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 // Create a new product (seller only)
 export const createProduct = async (req, res) => {
   try {
-    const sellerId = req.user.verified.userId;
+    const sellerId = req.user.verified.id;
     const product = await prisma.product.create({
       data: {
         ...req.body,
@@ -94,7 +94,7 @@ export const getProductById = async (req, res) => {
 // Update product (seller only)
 export const updateProduct = async (req, res) => {
   try {
-    const sellerId = req.user.verified.userId;
+    const sellerId = req.user.verified.id;
     const productId = parseInt(req.params.id);
 
     // Check if product exists and belongs to seller
@@ -123,7 +123,7 @@ export const updateProduct = async (req, res) => {
 // Delete product (seller only)
 export const deleteProduct = async (req, res) => {
   try {
-    const sellerId = req.user.verified.userId;
+    const sellerId = req.user.verified.id;
     const productId = parseInt(req.params.id);
 
     // Check if product exists and belongs to seller
