@@ -276,4 +276,316 @@ export const onboardSeller = async (req, res) => {
       message: "Error during seller onboarding",
     });
   }
+};
+
+// Analytics Controller Functions
+export const getAnalyticsSummary = async (req, res) => {
+    try {
+        const sellerId = req.user.verified.userId;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        // Get today's revenue
+        const todayRevenue = await db.order.aggregate({
+            where: {
+                products: {
+                    some: {
+                        product: {
+                            sellerId
+                        }
+                    }
+                },
+                status: 'completed',
+                createdAt: {
+                    gte: today
+                }
+            },
+            _sum: {
+                totalPrice: true
+            }
+        });
+
+        // Get yesterday's revenue for comparison
+        const yesterdayRevenue = await db.order.aggregate({
+            where: {
+                products: {
+                    some: {
+                        product: {
+                            sellerId
+                        }
+                    }
+                },
+                status: 'completed',
+                createdAt: {
+                    gte: yesterday,
+                    lt: today
+                }
+            },
+            _sum: {
+                totalPrice: true
+            }
+        });
+
+        // Calculate revenue change percentage
+        const todayRev = todayRevenue._sum.totalPrice || 0;
+        const yesterdayRev = yesterdayRevenue._sum.totalPrice || 0;
+        const revenueChange = yesterdayRev > 0 ? ((todayRev - yesterdayRev) / yesterdayRev) * 100 : 0;
+
+        // Get total sales count
+        const totalSales = await db.order.count({
+            where: {
+                products: {
+                    some: {
+                        product: {
+                            sellerId
+                        }
+                    }
+                },
+                status: 'completed'
+            }
+        });
+
+        // Get total views
+        const totalViews = await db.productView.count({
+            where: {
+                product: {
+                    sellerId
+                }
+            }
+        });
+
+        // Get conversion rate (sales / views * 100)
+        const conversionRate = totalViews > 0 ? (totalSales / totalViews) * 100 : 0;
+
+        res.json({
+            todayRevenue: todayRev,
+            revenueChange: Math.round(revenueChange * 100) / 100, // Round to 2 decimal places
+            totalSales,
+            totalViews,
+            conversionRate: Math.round(conversionRate * 100) / 100
+        });
+    } catch (error) {
+        console.error('Error fetching analytics summary:', error);
+        res.status(500).json({ message: "Error fetching analytics summary", error: error.message });
+    }
+};
+
+export const getRevenueAnalytics = async (req, res) => {
+    try {
+        const sellerId = req.user.verified.userId;
+        const { period = 'week' } = req.query; // week, month, year
+
+        let startDate, endDate, groupBy;
+        const now = new Date();
+
+        switch (period) {
+            case 'week':
+                startDate = new Date(now);
+                startDate.setDate(now.getDate() - 7);
+                groupBy = 'day';
+                break;
+            case 'month':
+                startDate = new Date(now);
+                startDate.setMonth(now.getMonth() - 1);
+                groupBy = 'week';
+                break;
+            case 'year':
+                startDate = new Date(now);
+                startDate.setFullYear(now.getFullYear() - 1);
+                groupBy = 'month';
+                break;
+            default:
+                startDate = new Date(now);
+                startDate.setDate(now.getDate() - 7);
+                groupBy = 'day';
+        }
+
+        // Get revenue data grouped by period
+        const revenueData = await db.$queryRaw`
+            SELECT 
+                CASE 
+                    WHEN ${groupBy} = 'day' THEN DATE(o."createdAt")
+                    WHEN ${groupBy} = 'week' THEN DATE_TRUNC('week', o."createdAt")
+                    WHEN ${groupBy} = 'month' THEN DATE_TRUNC('month', o."createdAt")
+                END as label,
+                SUM(o."totalPrice") as value
+            FROM "Order" o
+            JOIN "OrderProduct" op ON o.id = op."orderId"
+            JOIN "Product" p ON op."productId" = p.id
+            WHERE p."sellerId" = ${sellerId}
+                AND o.status = 'completed'
+                AND o."createdAt" >= ${startDate}
+            GROUP BY label
+            ORDER BY label
+        `;
+
+        res.json(revenueData);
+    } catch (error) {
+        console.error('Error fetching revenue analytics:', error);
+        res.status(500).json({ message: "Error fetching revenue analytics", error: error.message });
+    }
+};
+
+export const getViewsAnalytics = async (req, res) => {
+    try {
+        const sellerId = req.user.verified.userId;
+        const { period = 'week' } = req.query; // week, month, year
+
+        let startDate, groupBy;
+        const now = new Date();
+
+        switch (period) {
+            case 'week':
+                startDate = new Date(now);
+                startDate.setDate(now.getDate() - 7);
+                groupBy = 'day';
+                break;
+            case 'month':
+                startDate = new Date(now);
+                startDate.setMonth(now.getMonth() - 1);
+                groupBy = 'week';
+                break;
+            case 'year':
+                startDate = new Date(now);
+                startDate.setFullYear(now.getFullYear() - 1);
+                groupBy = 'month';
+                break;
+            default:
+                startDate = new Date(now);
+                startDate.setDate(now.getDate() - 7);
+                groupBy = 'day';
+        }
+
+        // Get views data grouped by period
+        const viewsData = await db.$queryRaw`
+            SELECT 
+                CASE 
+                    WHEN ${groupBy} = 'day' THEN DATE(pv."createdAt")
+                    WHEN ${groupBy} = 'week' THEN DATE_TRUNC('week', pv."createdAt")
+                    WHEN ${groupBy} = 'month' THEN DATE_TRUNC('month', pv."createdAt")
+                END as label,
+                COUNT(*) as value
+            FROM "ProductView" pv
+            JOIN "Product" p ON pv."productId" = p.id
+            WHERE p."sellerId" = ${sellerId}
+                AND pv."createdAt" >= ${startDate}
+            GROUP BY label
+            ORDER BY label
+        `;
+
+        res.json(viewsData);
+    } catch (error) {
+        console.error('Error fetching views analytics:', error);
+        res.status(500).json({ message: "Error fetching views analytics", error: error.message });
+    }
+};
+
+export const getRecentSales = async (req, res) => {
+    try {
+        const sellerId = req.user.verified.userId;
+        const { limit = 10 } = req.query;
+
+        const recentSales = await db.order.findMany({
+            where: {
+                products: {
+                    some: {
+                        product: {
+                            sellerId
+                        }
+                    }
+                },
+                status: 'completed'
+            },
+            select: {
+                id: true,
+                totalPrice: true,
+                createdAt: true,
+                user: {
+                    select: {
+                        email: true
+                    }
+                },
+                products: {
+                    select: {
+                        product: {
+                            select: {
+                                title: true
+                            }
+                        },
+                        quantity: true,
+                        price: true
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            },
+            take: parseInt(limit)
+        });
+
+        // Transform data to match frontend expectations
+        const transformedSales = recentSales.map(order => {
+            const firstProduct = order.products[0]?.product;
+            return {
+                key: order.id.toString(),
+                item: firstProduct?.title || 'Unknown Product',
+                price: order.totalPrice,
+                date: order.createdAt.toISOString().split('T')[0],
+                buyer: order.user.email
+            };
+        });
+
+        res.json(transformedSales);
+    } catch (error) {
+        console.error('Error fetching recent sales:', error);
+        res.status(500).json({ message: "Error fetching recent sales", error: error.message });
+    }
+};
+
+export const getProductPerformance = async (req, res) => {
+    try {
+        const sellerId = req.user.verified.userId;
+
+        const productPerformance = await db.product.findMany({
+            where: {
+                sellerId
+            },
+            select: {
+                id: true,
+                title: true,
+                price: true,
+                category: true,
+                _count: {
+                    select: {
+                        views: true,
+                        orders: true
+                    }
+                }
+            },
+            orderBy: {
+                views: {
+                    _count: 'desc'
+                }
+            }
+        });
+
+        // Transform data to include performance metrics
+        const performanceData = productPerformance.map(product => ({
+            id: product.id,
+            title: product.title,
+            price: product.price,
+            category: product.category,
+            views: product._count.views,
+            sales: product._count.orders,
+            conversionRate: product._count.views > 0 ? 
+                (product._count.orders / product._count.views) * 100 : 0
+        }));
+
+        res.json(performanceData);
+    } catch (error) {
+        console.error('Error fetching product performance:', error);
+        res.status(500).json({ message: "Error fetching product performance", error: error.message });
+    }
 }; 

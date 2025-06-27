@@ -56,6 +56,7 @@ model Product {
   updatedAt   DateTime       @updatedAt
   orders      OrderProduct[]
   CartItem    CartItem[]
+  views       ProductView[]
 }
 
 model Cart {
@@ -100,6 +101,8 @@ model OrderProduct {
   orderId   Int
   product   Product @relation(fields: [productId], references: [id])
   productId Int
+  quantity  Int     @default(1)
+  price     Float   // Price at time of purchase
 
   @@id([orderId, productId])
   @@unique([orderId, productId])
@@ -115,4 +118,16 @@ model RefreshToken {
 
   @@index([token])
   @@index([userId])
+}
+
+model ProductView {
+  id        Int      @id @default(autoincrement())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId Int
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([createdAt])
 }

@@ -6,7 +6,8 @@ import {
   getProductById,
   updateProduct,
   deleteProduct,
-  getProductsBySeller
+  getProductsBySeller,
+  trackProductView
 } from '../controllers/productController.js';
 
 const router = express.Router();
@@ -334,5 +335,37 @@ router.put('/:id', loginRequired, sellerRequired, updateProduct);
  *         description: Product not found
  */
 router.delete('/:id', loginRequired, sellerRequired, deleteProduct);
+
+/**
+ * @swagger
+ * /api/products/{id}/view:
+ *   post:
+ *     summary: Track a product view
+ *     description: Records a view for a specific product for analytics purposes
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Product ID
+ *     responses:
+ *       200:
+ *         description: View tracked successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   description: Success message
+ *       404:
+ *         description: Product not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/:id/view', trackProductView);
 
 export default router; 

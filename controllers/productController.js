@@ -168,4 +168,36 @@ export const getProductsBySeller = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: "Error fetching seller's products", error: error.message });
   }
+};
+
+// Track product view for analytics
+export const trackProductView = async (req, res) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const ipAddress = req.ip || req.connection.remoteAddress;
+    const userAgent = req.get('User-Agent');
+
+    // Check if product exists
+    const product = await prisma.product.findUnique({
+      where: { id: productId }
+    });
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Create view record
+    await prisma.productView.create({
+      data: {
+        productId,
+        ipAddress,
+        userAgent
+      }
+    });
+
+    res.json({ message: "View tracked successfully" });
+  } catch (error) {
+    console.error('Error tracking product view:', error);
+    res.status(500).json({ message: "Error tracking product view", error: error.message });
+  }
 }; 

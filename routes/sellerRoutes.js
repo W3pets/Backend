@@ -6,7 +6,12 @@ import {
     getSellerListings,
     updateListing,
     getListingPreview,
-    onboardSeller
+    onboardSeller,
+    getAnalyticsSummary,
+    getRevenueAnalytics,
+    getViewsAnalytics,
+    getRecentSales,
+    getProductPerformance
 } from "../controllers/sellerController.js";
 
 const router = express.Router();
@@ -309,5 +314,228 @@ router.post(
   ]),
   onboardSeller
 );
+
+/**
+ * @swagger
+ * /api/seller/analytics/summary:
+ *   get:
+ *     summary: Get seller analytics summary
+ *     description: Retrieves summary analytics data including today's revenue, revenue change, total sales, views, and conversion rate
+ *     tags: [Seller Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Analytics summary retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 todayRevenue:
+ *                   type: number
+ *                   description: Today's revenue in Naira
+ *                 revenueChange:
+ *                   type: number
+ *                   description: Percentage change in revenue compared to yesterday
+ *                 totalSales:
+ *                   type: number
+ *                   description: Total number of completed sales
+ *                 totalViews:
+ *                   type: number
+ *                   description: Total number of product views
+ *                 conversionRate:
+ *                   type: number
+ *                   description: Conversion rate percentage (sales/views * 100)
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       500:
+ *         description: Server error
+ */
+router.get("/analytics/summary", loginRequired, sellerRequired, getAnalyticsSummary);
+
+/**
+ * @swagger
+ * /api/seller/analytics/revenue:
+ *   get:
+ *     summary: Get revenue analytics data
+ *     description: Retrieves revenue data over time for charts and analysis
+ *     tags: [Seller Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [week, month, year]
+ *         description: Time period for analytics data
+ *     responses:
+ *       200:
+ *         description: Revenue analytics data retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   label:
+ *                     type: string
+ *                     description: Time period label
+ *                   value:
+ *                     type: number
+ *                     description: Revenue value for the period
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       500:
+ *         description: Server error
+ */
+router.get("/analytics/revenue", loginRequired, sellerRequired, getRevenueAnalytics);
+
+/**
+ * @swagger
+ * /api/seller/analytics/views:
+ *   get:
+ *     summary: Get views analytics data
+ *     description: Retrieves product views data over time for charts and analysis
+ *     tags: [Seller Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: period
+ *         schema:
+ *           type: string
+ *           enum: [week, month, year]
+ *         description: Time period for analytics data
+ *     responses:
+ *       200:
+ *         description: Views analytics data retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   label:
+ *                     type: string
+ *                     description: Time period label
+ *                   value:
+ *                     type: number
+ *                     description: Number of views for the period
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       500:
+ *         description: Server error
+ */
+router.get("/analytics/views", loginRequired, sellerRequired, getViewsAnalytics);
+
+/**
+ * @swagger
+ * /api/seller/analytics/recent-sales:
+ *   get:
+ *     summary: Get recent sales data
+ *     description: Retrieves recent sales data for the seller's products
+ *     tags: [Seller Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of recent sales to retrieve
+ *     responses:
+ *       200:
+ *         description: Recent sales data retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   key:
+ *                     type: string
+ *                     description: Unique identifier for the sale
+ *                   item:
+ *                     type: string
+ *                     description: Product title
+ *                   price:
+ *                     type: number
+ *                     description: Sale price in Naira
+ *                   date:
+ *                     type: string
+ *                     format: date
+ *                     description: Date of the sale
+ *                   buyer:
+ *                     type: string
+ *                     description: Buyer's email
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       500:
+ *         description: Server error
+ */
+router.get("/analytics/recent-sales", loginRequired, sellerRequired, getRecentSales);
+
+/**
+ * @swagger
+ * /api/seller/analytics/product-performance:
+ *   get:
+ *     summary: Get product performance analytics
+ *     description: Retrieves performance metrics for all seller's products
+ *     tags: [Seller Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Product performance data retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: Product ID
+ *                   title:
+ *                     type: string
+ *                     description: Product title
+ *                   price:
+ *                     type: number
+ *                     description: Product price
+ *                   category:
+ *                     type: string
+ *                     description: Product category
+ *                   views:
+ *                     type: number
+ *                     description: Number of views
+ *                   sales:
+ *                     type: number
+ *                     description: Number of sales
+ *                   conversionRate:
+ *                     type: number
+ *                     description: Conversion rate percentage
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       500:
+ *         description: Server error
+ */
+router.get("/analytics/product-performance", loginRequired, sellerRequired, getProductPerformance);
 
 export default router; 
