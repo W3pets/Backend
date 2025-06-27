@@ -265,7 +265,7 @@ router.get("/listings/:id/preview", loginRequired, sellerRequired, getListingPre
 
 /**
  * @swagger
- * /api/seller/onboarding:
+ * /api/seller/onboard:
  *   post:
  *     summary: Complete seller onboarding
  *     description: Creates seller profile and initial product listing
@@ -300,7 +300,7 @@ router.get("/listings/:id/preview", loginRequired, sellerRequired, getListingPre
  *         description: Server error
  */
 router.post(
-  "/onboarding",
+  "/onboard",
   loginRequired,
   uploadFiles([
     { name: 'brand_image', maxCount: 1 },
