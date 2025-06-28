@@ -23,20 +23,83 @@ const router = express.Router();
  *     SellerOnboardingInput:
  *       type: object
  *       required:
- *         - business_name
- *         - contact_phone
- *         - business_address
- *         - city
- *         - state
+ *         - listing
+ *         - profile
+ *         - brand_image
+ *         - product_photos
+ *       properties:
+ *         listing:
+ *           type: string
+ *           description: JSON string containing product listing data
+ *           example: '{"product_title":"Persian Cat","product_category":"cat","product_brand":"Persian","age":2,"quantity":1,"weight":4.5,"price":80000,"gender":"female"}'
+ *         profile:
+ *           type: string
+ *           description: JSON string containing seller profile data
+ *           example: '{"business_name":"Pet Store","contact_phone":"234 123 4567","business_address":"123 Main St","city":"Lagos","state":"Lagos","location_coords":{"lat":6.5568768,"lng":3.3488896},"seller_uniqueness":"Quality pets"}'
+ *         verification_id:
+ *           type: string
+ *           format: binary
+ *           description: Optional identity verification document
+ *         brand_image:
+ *           type: string
+ *           format: binary
+ *           description: Brand image/logo file
+ *         product_photos:
+ *           type: array
+ *           items:
+ *             type: string
+ *             format: binary
+ *           description: Array of product photo files (up to 5)
+ *         product_video:
+ *           type: string
+ *           format: binary
+ *           description: Product video file (max 20MB)
+ *
+ *     ListingData:
+ *       type: object
+ *       required:
  *         - product_title
  *         - product_category
- *         - product_breed
+ *         - product_brand
  *         - age
  *         - quantity
  *         - weight
  *         - price
  *         - gender
- *         - product_photos
+ *       properties:
+ *         product_title:
+ *           type: string
+ *           description: Title of the product
+ *         product_category:
+ *           type: string
+ *           description: Category of the product
+ *         product_brand:
+ *           type: string
+ *           description: Breed of the animal
+ *         age:
+ *           type: number
+ *           description: Age of the animal
+ *         quantity:
+ *           type: number
+ *           description: Available quantity
+ *         weight:
+ *           type: number
+ *           description: Weight of the animal
+ *         price:
+ *           type: number
+ *           description: Price in Naira
+ *         gender:
+ *           type: string
+ *           description: Gender of the animal
+ *
+ *     ProfileData:
+ *       type: object
+ *       required:
+ *         - business_name
+ *         - contact_phone
+ *         - business_address
+ *         - city
+ *         - state
  *       properties:
  *         business_name:
  *           type: string
@@ -63,44 +126,6 @@ const router = express.Router();
  *         seller_uniqueness:
  *           type: string
  *           description: What makes the seller unique
- *         brand_image:
- *           type: string
- *           format: binary
- *           description: Brand image/logo file
- *         product_title:
- *           type: string
- *           description: Title of the product
- *         product_category:
- *           type: string
- *           description: Category of the product
- *         product_breed:
- *           type: string
- *           description: Breed of the animal
- *         age:
- *           type: string
- *           description: Age of the animal
- *         quantity:
- *           type: number
- *           description: Available quantity
- *         weight:
- *           type: number
- *           description: Weight of the animal
- *         price:
- *           type: number
- *           description: Price in Naira
- *         gender:
- *           type: string
- *           description: Gender of the animal
- *         product_photos:
- *           type: array
- *           items:
- *             type: string
- *             format: binary
- *           description: Array of product photo files (up to 5)
- *         product_video:
- *           type: string
- *           format: binary
- *           description: Product video file (max 20MB)
  *
  * @swagger
  * /api/seller/dashboard/stats:
@@ -273,7 +298,7 @@ router.get("/listings/:id/preview", loginRequired, sellerRequired, getListingPre
  * /api/seller/onboard:
  *   post:
  *     summary: Complete seller onboarding
- *     description: Creates seller profile and initial product listing
+ *     description: Creates seller profile and initial product listing. Accepts multipart form data with JSON strings for listing and profile data, plus file uploads.
  *     tags: [Seller Dashboard]
  *     security:
  *       - bearerAuth: []
@@ -285,7 +310,7 @@ router.get("/listings/:id/preview", loginRequired, sellerRequired, getListingPre
  *             $ref: '#/components/schemas/SellerOnboardingInput'
  *     responses:
  *       200:
- *         description: Seller onboarding completed successfully. Returns the new seller and product information.
+ *         description: Seller onboarding completed successfully
  *         content:
  *           application/json:
  *             schema:
@@ -293,12 +318,23 @@ router.get("/listings/:id/preview", loginRequired, sellerRequired, getListingPre
  *               properties:
  *                 message:
  *                   type: string
- *                 seller:
- *                   $ref: '#/components/schemas/User'
- *                 product:
- *                   $ref: '#/components/schemas/Product'
+ *                   example: "Seller onboarding completed successfully"
+ *                 sellerId:
+ *                   type: integer
+ *                   description: ID of the updated user (now a seller)
+ *                 productId:
+ *                   type: integer
+ *                   description: ID of the created product listing
  *       400:
- *         description: Missing required fields or invalid file types
+ *         description: Missing required fields, invalid JSON data, or missing file uploads
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Missing required profile field: business_name"
  *       401:
  *         description: Not authenticated
  *       500:
@@ -310,7 +346,8 @@ router.post(
   uploadFiles([
     { name: 'brand_image', maxCount: 1 },
     { name: 'product_photos', maxCount: 5 },
-    { name: 'product_video', maxCount: 1 }
+    { name: 'product_video', maxCount: 1 },
+    { name: 'verification_id', maxCount: 1 }
   ]),
   onboardSeller
 );

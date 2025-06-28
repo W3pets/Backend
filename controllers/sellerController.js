@@ -3,7 +3,7 @@ import { getFileUrl } from "../helpers/fileUpload.js";
 
 export const getDashboardStats = async (req, res) => {
     try {
-        const sellerId = req.user.verified.userId;
+        const sellerId = req.user.verified.id;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -65,7 +65,7 @@ export const getDashboardStats = async (req, res) => {
 
 export const getSellerListings = async (req, res) => {
     try {
-        const sellerId = req.user.verified.userId;
+        const sellerId = req.user.verified.id;
         
         const listings = await db.product.findMany({
             where: {
@@ -95,7 +95,7 @@ export const getSellerListings = async (req, res) => {
 
 export const updateListing = async (req, res) => {
     try {
-        const sellerId = req.user.verified.userId;
+        const sellerId = req.user.verified.id;
         const listingId = parseInt(req.params.id);
         
         // Verify ownership
@@ -126,7 +126,7 @@ export const updateListing = async (req, res) => {
 
 export const getListingPreview = async (req, res) => {
     try {
-        const sellerId = req.user.verified.userId;
+        const sellerId = req.user.verified.id;
         const listingId = parseInt(req.params.id);
         
         const listing = await db.product.findFirst({
@@ -159,31 +159,53 @@ export const getListingPreview = async (req, res) => {
 
 export const onboardSeller = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.verified.id;
     const files = req.files;
 
-    // Validate required fields
-    const requiredFields = [
+    // Parse JSON strings from frontend
+    let listingData, profileData;
+    try {
+      listingData = JSON.parse(req.body.listing);
+      profileData = JSON.parse(req.body.profile);
+    } catch (error) {
+      return res.status(400).json({
+        message: "Invalid JSON data in listing or profile fields",
+      });
+    }
+
+    // Validate required fields from profile
+    const requiredProfileFields = [
       "business_name",
-      "contact_phone",
+      "contact_phone", 
       "business_address",
       "city",
-      "state",
+      "state"
+    ];
+
+    for (const field of requiredProfileFields) {
+      if (!profileData[field]) {
+        return res.status(400).json({
+          message: `Missing required profile field: ${field}`,
+        });
+      }
+    }
+
+    // Validate required fields from listing
+    const requiredListingFields = [
       "product_title",
       "product_category",
-      "product_breed",
+      "product_brand", // Note: frontend uses product_brand, not product_breed
       "age",
       "quantity",
       "weight",
       "price",
-      "gender",
+      "gender"
     ];
 
-    // Check required fields
-    for (const field of requiredFields) {
-      if (!req.body[field]) {
+    for (const field of requiredListingFields) {
+      if (!listingData[field]) {
         return res.status(400).json({
-          message: `Missing required field: ${field}`,
+          message: `Missing required listing field: ${field}`,
         });
       }
     }
@@ -199,81 +221,60 @@ export const onboardSeller = async (req, res) => {
     const brandImageUrl = getFileUrl(files.brand_image[0].key);
     const productPhotoUrls = files.product_photos.map(file => getFileUrl(file.key));
     const productVideoUrl = files.product_video ? getFileUrl(files.product_video[0].key) : null;
+    const verificationIdUrl = files.verification_id ? getFileUrl(files.verification_id[0].key) : null;
 
-    // Start transaction
-    const result = await db.tx(async (t) => {
-      // Create seller profile
-      const seller = await t.one(
-        `INSERT INTO sellers (
-          user_id,
-          business_name,
-          contact_phone,
-          business_address,
-          city,
-          state,
-          location_coords,
-          seller_uniqueness,
-          brand_image
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        RETURNING id`,
-        [
-          userId,
-          req.body.business_name,
-          req.body.contact_phone,
-          req.body.business_address,
-          req.body.city,
-          req.body.state,
-          req.body.location_coords,
-          req.body.seller_uniqueness,
-          brandImageUrl,
-        ]
-      );
+    // Start transaction using Prisma
+    const result = await db.$transaction(async (tx) => {
+      // Update user with seller information
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: {
+          role: 'seller',
+          isSeller: true,
+          businessName: profileData.business_name,
+          phoneNumber: profileData.contact_phone,
+          address: profileData.business_address,
+          city: profileData.city,
+          state: profileData.state,
+          location: profileData.location_coords ? JSON.stringify(profileData.location_coords) : null,
+          description: profileData.seller_uniqueness,
+          profileImage: brandImageUrl,
+          identityDocument: verificationIdUrl,
+          verificationStatus: verificationIdUrl ? 'pending' : null
+        }
+      });
 
       // Create product listing
-      const product = await t.one(
-        `INSERT INTO products (
-          seller_id,
-          title,
-          category,
-          breed,
-          age,
-          quantity,
-          weight,
-          price,
-          gender,
-          photos,
-          video_url
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-        RETURNING id`,
-        [
-          seller.id,
-          req.body.product_title,
-          req.body.product_category,
-          req.body.product_breed,
-          req.body.age,
-          req.body.quantity,
-          req.body.weight,
-          req.body.price,
-          req.body.gender,
-          productPhotoUrls,
-          productVideoUrl,
-        ]
-      );
+      const product = await tx.product.create({
+        data: {
+          title: listingData.product_title,
+          category: listingData.product_category,
+          breed: listingData.product_brand, // Map product_brand to breed
+          age: listingData.age.toString(),
+          gender: listingData.gender,
+          weight: parseFloat(listingData.weight),
+          price: parseFloat(listingData.price),
+          location: profileData.city + ', ' + profileData.state,
+          description: listingData.product_title, // Use title as description for now
+          imageUrl: productPhotoUrls[0], // Use first photo as main image
+          videoUrl: productVideoUrl || '',
+          sellerId: userId
+        }
+      });
 
-      // Update user role to seller
-      await t.none("UPDATE users SET role = 'seller' WHERE id = $1", [userId]);
-
-      return { sellerId: seller.id, productId: product.id };
+      return { userId: updatedUser.id, productId: product.id };
     });
 
     res.status(200).json({
       message: "Seller onboarding completed successfully",
-      sellerId: result.sellerId,
+      sellerId: result.userId,
+      productId: result.productId
     });
   } catch (error) {
     console.error("Seller onboarding error:", error);
     res.status(500).json({
       message: "Error during seller onboarding",
+      error: error.message
     });
   }
 };
@@ -281,7 +282,7 @@ export const onboardSeller = async (req, res) => {
 // Analytics Controller Functions
 export const getAnalyticsSummary = async (req, res) => {
     try {
-        const sellerId = req.user.verified.userId;
+        const sellerId = req.user.verified.id;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const yesterday = new Date(today);
@@ -374,7 +375,7 @@ export const getAnalyticsSummary = async (req, res) => {
 
 export const getRevenueAnalytics = async (req, res) => {
     try {
-        const sellerId = req.user.verified.userId;
+        const sellerId = req.user.verified.id;
         const { period = 'week' } = req.query; // week, month, year
 
         let startDate, endDate, groupBy;
@@ -430,7 +431,7 @@ export const getRevenueAnalytics = async (req, res) => {
 
 export const getViewsAnalytics = async (req, res) => {
     try {
-        const sellerId = req.user.verified.userId;
+        const sellerId = req.user.verified.id;
         const { period = 'week' } = req.query; // week, month, year
 
         let startDate, groupBy;
@@ -484,7 +485,7 @@ export const getViewsAnalytics = async (req, res) => {
 
 export const getRecentSales = async (req, res) => {
     try {
-        const sellerId = req.user.verified.userId;
+        const sellerId = req.user.verified.id;
         const { limit = 10 } = req.query;
 
         const recentSales = await db.order.findMany({
@@ -546,7 +547,7 @@ export const getRecentSales = async (req, res) => {
 
 export const getProductPerformance = async (req, res) => {
     try {
-        const sellerId = req.user.verified.userId;
+        const sellerId = req.user.verified.id;
 
         const productPerformance = await db.product.findMany({
             where: {

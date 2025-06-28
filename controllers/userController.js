@@ -243,63 +243,72 @@ const getCurrentUser = async (req, res) => {
 
 export const getUserProfile = async (req, res) => {
   try {
-    const userId = req.user.id;
-
-    const user = await db.one(
-      "SELECT id, username, email, role FROM users WHERE id = $1",
-      [userId]
-    );
-
-    res.status(200).json(user);
-  } catch (error) {
-    console.error("Get user profile error:", error);
-    res.status(500).json({
-      message: "Error retrieving user profile",
+    const userId = req.user.verified.id;
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isSeller: true,
+        isVerified: true,
+        businessName: true,
+        phoneNumber: true,
+        address: true,
+        city: true,
+        state: true,
+        description: true,
+        profileImage: true,
+        verificationStatus: true
+      }
     });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    res.status(500).json({ message: "Error fetching user profile" });
   }
 };
 
 export const updateUserProfile = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const { username, email } = req.body;
+    const userId = req.user.verified.id;
+    const { email, phoneNumber, address, city, state } = req.body;
 
-    // Check if email is already taken by another user
-    if (email) {
-      const existingUser = await db.user.findFirst({
-        where: {
-          email: email,
-          NOT: { id: userId }
-        },
-        select: { id: true }
-      });
-
-      if (existingUser) {
-        return res.status(400).json({
-          message: "Email already in use",
-        });
+    const updatedUser = await db.user.update({
+      where: { id: userId },
+      data: {
+        email: email || undefined,
+        phoneNumber: phoneNumber || undefined,
+        address: address || undefined,
+        city: city || undefined,
+        state: state || undefined
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isSeller: true,
+        isVerified: true,
+        businessName: true,
+        phoneNumber: true,
+        address: true,
+        city: true,
+        state: true,
+        description: true,
+        profileImage: true,
+        verificationStatus: true
       }
-    }
-
-    // Update user profile
-    const updatedUser = await db.one(
-      `UPDATE users 
-       SET username = COALESCE($1, username),
-           email = COALESCE($2, email)
-       WHERE id = $3
-       RETURNING id, username, email, role`,
-      [username, email, userId]
-    );
-
-    res.status(200).json({
-      message: "Profile updated successfully",
-      user: updatedUser,
     });
+
+    res.json(updatedUser);
   } catch (error) {
-    console.error("Update user profile error:", error);
-    res.status(500).json({
-      message: "Error updating user profile",
-    });
+    console.error("Error updating user profile:", error);
+    res.status(500).json({ message: "Error updating user profile" });
   }
 };
 
