@@ -13,6 +13,7 @@ import {
     getRecentSales,
     getProductPerformance
 } from "../controllers/sellerController.js";
+import multer from "multer";
 
 const router = express.Router();
 
@@ -349,6 +350,22 @@ router.post(
     { name: 'product_video', maxCount: 1 },
     { name: 'verification_id', maxCount: 1 }
   ]),
+  (err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+      console.error('Multer error:', err);
+      return res.status(400).json({ 
+        message: 'File upload error', 
+        error: err.message 
+      });
+    } else if (err) {
+      console.error('File upload error:', err);
+      return res.status(400).json({ 
+        message: 'File upload error', 
+        error: err.message 
+      });
+    }
+    next();
+  },
   onboardSeller
 );
 

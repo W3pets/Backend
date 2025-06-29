@@ -160,7 +160,11 @@ export const getListingPreview = async (req, res) => {
 export const onboardSeller = async (req, res) => {
   try {
     const userId = req.user.verified.id;
-    const files = req.files;
+    const files = req.files || {};
+
+    // Debug logging
+    console.log('Files received:', JSON.stringify(files, null, 2));
+    console.log('Request body keys:', Object.keys(req.body));
 
     // Parse JSON strings from frontend
     let listingData, profileData;
@@ -210,18 +214,30 @@ export const onboardSeller = async (req, res) => {
       }
     }
 
-    // Validate files
-    if (!files.brand_image || !files.product_photos) {
+    // Validate files - check if files exist and have content
+    if (!files.brand_image || !Array.isArray(files.brand_image) || files.brand_image.length === 0) {
+      console.log('Brand image validation failed:', files.brand_image);
       return res.status(400).json({
-        message: "Brand image and at least one product photo are required",
+        message: "Brand image is required",
+      });
+    }
+
+    if (!files.product_photos || !Array.isArray(files.product_photos) || files.product_photos.length === 0) {
+      console.log('Product photos validation failed:', files.product_photos);
+      return res.status(400).json({
+        message: "At least one product photo is required",
       });
     }
 
     // Get file URLs
     const brandImageUrl = getFileUrl(files.brand_image[0].key);
     const productPhotoUrls = files.product_photos.map(file => getFileUrl(file.key));
-    const productVideoUrl = files.product_video ? getFileUrl(files.product_video[0].key) : null;
-    const verificationIdUrl = files.verification_id ? getFileUrl(files.verification_id[0].key) : null;
+    const productVideoUrl = files.product_video && Array.isArray(files.product_video) && files.product_video.length > 0 
+      ? getFileUrl(files.product_video[0].key) 
+      : null;
+    const verificationIdUrl = files.verification_id && Array.isArray(files.verification_id) && files.verification_id.length > 0 
+      ? getFileUrl(files.verification_id[0].key) 
+      : null;
 
     // Start transaction using Prisma
     const result = await db.$transaction(async (tx) => {
