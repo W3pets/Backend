@@ -11,7 +11,8 @@ import {
     getRevenueAnalytics,
     getViewsAnalytics,
     getRecentSales,
-    getProductPerformance
+    getProductPerformance,
+    getSellerNotifications
 } from "../controllers/sellerController.js";
 import multer from "multer";
 
@@ -591,5 +592,45 @@ router.get("/analytics/recent-sales", loginRequired, sellerRequired, getRecentSa
  *         description: Server error
  */
 router.get("/analytics/product-performance", loginRequired, sellerRequired, getProductPerformance);
+
+/**
+ * @swagger
+ * /api/seller/notifications:
+ *   get:
+ *     summary: Get seller's notifications
+ *     description: Retrieves a list of notifications for the current seller
+ *     tags: [Seller Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of notifications
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   type:
+ *                     type: string
+ *                     description: Type of notification (e.g., order, message, product, system)
+ *                   message:
+ *                     type: string
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *                   read:
+ *                     type: boolean
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       500:
+ *         description: Server error
+ */
+router.get("/notifications", loginRequired, sellerRequired, getSellerNotifications);
 
 export default router; 

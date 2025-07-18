@@ -13,7 +13,7 @@
   "type": "module",
   "dependencies": {
     "@google-cloud/secret-manager": "^6.0.1",
-    "@prisma/client": "^6.5.0",
+    "@prisma/client": "^6.12.0",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",
@@ -30,6 +30,6 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
-    "prisma": "^6.5.0"
+    "prisma": "^6.12.0"
   }
 }

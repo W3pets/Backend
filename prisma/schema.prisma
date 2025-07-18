@@ -39,6 +39,7 @@ model User {
   customerConversations Conversation[] @relation("CustomerConversations")
   sellerConversations   Conversation[] @relation("SellerConversations")
   sentMessages         Message[]
+  notifications        Notification[]
 }
 
 model Product {
@@ -172,5 +173,18 @@ model Message {
 
   @@index([conversationId])
   @@index([senderId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  type      String   // e.g., 'order', 'message', 'product', 'system', etc.
+  message   String
+  createdAt DateTime @default(now())
+  read      Boolean  @default(false)
+
+  @@index([userId])
   @@index([createdAt])
 }

@@ -609,3 +609,24 @@ export const getProductPerformance = async (req, res) => {
         res.status(500).json({ message: "Error fetching product performance", error: error.message });
     }
 }; 
+
+// Get seller notifications
+export const getSellerNotifications = async (req, res) => {
+  try {
+    const sellerId = req.user.verified.id;
+    const notifications = await db.notification.findMany({
+      where: { userId: sellerId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        type: true,
+        message: true,
+        createdAt: true,
+        read: true
+      }
+    });
+    res.json(notifications);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching notifications", error: error.message });
+  }
+}; 
