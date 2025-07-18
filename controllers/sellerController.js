@@ -27,11 +27,14 @@ export const getDashboardStats = async (req, res) => {
             }
         });
 
-        // Get unread messages count
+        // Get unread messages count using the new message system
         const unreadMessages = await db.message.count({
             where: {
-                recipientId: sellerId,
-                read: false
+                conversation: {
+                    sellerId
+                },
+                senderId: { not: sellerId },
+                isRead: false
             }
         });
 

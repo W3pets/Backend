@@ -6,6 +6,7 @@ import swaggerJSDoc from "swagger-jsdoc";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import sellerRoutes from "./routes/sellerRoutes.js";
+import messageRoutes from "./routes/messageRoutes.js";
 import cookieParser from "cookie-parser";
 import { db } from "./helpers/db.js";
 
@@ -127,6 +128,7 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/seller", sellerRoutes);
+app.use("/api/messages", messageRoutes);
 
 app.get('/delete_all', async (req, res) => {
   const user = await db.user.delete({
