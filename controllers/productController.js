@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { createNotification } from "../helpers/notification.js";
 const prisma = new PrismaClient();
 
 // Create a new product (seller only)
@@ -117,6 +118,42 @@ export const updateProduct = async (req, res) => {
     res.json(product);
   } catch (error) {
     res.status(500).json({ message: "Error updating product", error: error.message });
+  }
+};
+
+// Update product status (seller only)
+export const updateProductStatus = async (req, res) => {
+  try {
+    const sellerId = req.user.verified.id;
+    const productId = parseInt(req.params.id);
+    const { status } = req.body;
+
+    // Check if product exists and belongs to seller
+    const product = await prisma.product.findUnique({
+      where: { id: productId }
+    });
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    if (product.sellerId !== sellerId) {
+      return res.status(403).json({ message: "You can only update your own products" });
+    }
+
+    const updatedProduct = await prisma.product.update({
+      where: { id: productId },
+      data: { status }
+    });
+
+    // Notify seller of status change
+    await createNotification({
+      userId: product.sellerId,
+      type: "product",
+      message: `Your product \"${product.title}\" status changed to ${updatedProduct.status}.`
+    });
+
+    res.json(updatedProduct);
+  } catch (error) {
+    res.status(500).json({ message: "Error updating product status", error: error.message });
   }
 };
 

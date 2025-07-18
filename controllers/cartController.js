@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
+import { createNotification } from "../helpers/notification.js";
 
 const prisma = new PrismaClient();
 
@@ -322,6 +323,16 @@ export const initializePayment = async (req, res) => {
         status: 'processing'
       }
     });
+
+    // Notify sellers for each product in the order
+    const sellerIds = [...new Set(cart.items.map(item => item.product.sellerId))];
+    for (const sellerId of sellerIds) {
+      await createNotification({
+        userId: sellerId,
+        type: "order",
+        message: `You have a new order for your product(s).`
+      });
+    }
 
     // Clear cart after successful order creation
     await prisma.cartItem.deleteMany({

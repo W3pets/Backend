@@ -7,7 +7,8 @@ import {
   updateProduct,
   deleteProduct,
   getProductsBySeller,
-  trackProductView
+  trackProductView,
+  updateProductStatus
 } from '../controllers/productController.js';
 
 const router = express.Router();
@@ -367,5 +368,49 @@ router.delete('/:id', loginRequired, sellerRequired, deleteProduct);
  *         description: Server error
  */
 router.post('/:id/view', trackProductView);
+
+/**
+ * @swagger
+ * /api/seller/products/{id}/status:
+ *   put:
+ *     summary: Update product status
+ *     description: Updates the status of a product (e.g., active, inactive, pending, rejected)
+ *     tags: [Seller Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Product ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 description: New status for the product
+ *     responses:
+ *       200:
+ *         description: Product status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Product'
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       404:
+ *         description: Product not found or not owned by seller
+ *       500:
+ *         description: Server error
+ */
+router.put("/products/:id/status", updateProductStatus);
 
 export default router; 

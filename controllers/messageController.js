@@ -1,4 +1,5 @@
 import { db } from "../helpers/db.js";
+import { createNotification } from "../helpers/notification.js";
 
 // Get all conversations for a user (customer or seller)
 export const getConversations = async (req, res) => {
@@ -196,6 +197,15 @@ export const sendMessage = async (req, res) => {
                 }
             }
         });
+
+        // Notify seller if the sender is not the seller
+        if (conversation.sellerId !== userId) {
+          await createNotification({
+            userId: conversation.sellerId,
+            type: "message",
+            message: `New message from a customer.`
+          });
+        }
 
         // Update conversation timestamp
         await db.conversation.update({
