@@ -630,3 +630,274 @@ export const getSellerNotifications = async (req, res) => {
     res.status(500).json({ message: "Error fetching notifications", error: error.message });
   }
 }; 
+
+// Customer Support
+export const getSellerSupport = async (req, res) => {
+  try {
+    const sellerId = req.user.verified.id;
+    
+    // For now, return a basic support structure
+    // In a real app, this would fetch support tickets, FAQs, etc.
+    res.json({
+      supportTickets: [],
+      faqs: [
+        {
+          question: "How do I add more products?",
+          answer: "Go to Products section and click 'New Product' to add more listings."
+        },
+        {
+          question: "How do I track my sales?",
+          answer: "Check the Analytics section to view your sales performance and revenue."
+        },
+        {
+          question: "How do I respond to customer messages?",
+          answer: "Go to Messages section to view and respond to customer inquiries."
+        }
+      ],
+      contactInfo: {
+        email: "support@w3pets.com",
+        phone: "+234 123 456 7890",
+        hours: "Monday - Friday, 9AM - 6PM"
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching support information", error: error.message });
+  }
+};
+
+// Settings - Profile Management
+export const getSellerProfileSettings = async (req, res) => {
+  try {
+    const sellerId = req.user.verified.id;
+    
+    const seller = await db.user.findUnique({
+      where: { id: sellerId },
+      select: {
+        id: true,
+        email: true,
+        businessName: true,
+        phoneNumber: true,
+        address: true,
+        city: true,
+        state: true,
+        description: true,
+        profileImage: true,
+        location: true
+      }
+    });
+
+    if (!seller) {
+      return res.status(404).json({ message: "Seller not found" });
+    }
+
+    res.json(seller);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching profile settings", error: error.message });
+  }
+};
+
+export const updateSellerProfileSettings = async (req, res) => {
+  try {
+    const sellerId = req.user.verified.id;
+    const { businessName, phoneNumber, address, city, state, description, location } = req.body;
+
+    const updatedSeller = await db.user.update({
+      where: { id: sellerId },
+      data: {
+        businessName,
+        phoneNumber,
+        address,
+        city,
+        state,
+        description,
+        location: location ? JSON.stringify(location) : null
+      },
+      select: {
+        id: true,
+        email: true,
+        businessName: true,
+        phoneNumber: true,
+        address: true,
+        city: true,
+        state: true,
+        description: true,
+        profileImage: true,
+        location: true
+      }
+    });
+
+    res.json(updatedSeller);
+  } catch (error) {
+    res.status(500).json({ message: "Error updating profile settings", error: error.message });
+  }
+};
+
+// Settings - Notification Preferences
+export const getSellerNotificationSettings = async (req, res) => {
+  try {
+    const sellerId = req.user.verified.id;
+    
+    // For now, return default notification settings
+    // In a real app, this would be stored in a separate table
+    res.json({
+      emailNotifications: true,
+      pushNotifications: true,
+      orderNotifications: true,
+      messageNotifications: true,
+      productNotifications: true,
+      marketingNotifications: false
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching notification settings", error: error.message });
+  }
+};
+
+export const updateSellerNotificationSettings = async (req, res) => {
+  try {
+    const sellerId = req.user.verified.id;
+    const { emailNotifications, pushNotifications, orderNotifications, messageNotifications, productNotifications, marketingNotifications } = req.body;
+
+    // In a real app, this would update a notification settings table
+    res.json({
+      emailNotifications,
+      pushNotifications,
+      orderNotifications,
+      messageNotifications,
+      productNotifications,
+      marketingNotifications
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating notification settings", error: error.message });
+  }
+};
+
+// Settings - Security
+export const getSellerSecuritySettings = async (req, res) => {
+  try {
+    const sellerId = req.user.verified.id;
+    
+    // For now, return basic security info
+    res.json({
+      twoFactorEnabled: false,
+      lastPasswordChange: new Date().toISOString(),
+      loginHistory: [],
+      activeSessions: 1
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching security settings", error: error.message });
+  }
+};
+
+export const updateSellerSecuritySettings = async (req, res) => {
+  try {
+    const sellerId = req.user.verified.id;
+    const { currentPassword, newPassword, twoFactorEnabled } = req.body;
+
+    if (newPassword) {
+      // Verify current password
+      const seller = await db.user.findUnique({
+        where: { id: sellerId },
+        select: { password: true }
+      });
+
+      const bcrypt = await import('bcrypt');
+      const isMatch = await bcrypt.compare(currentPassword, seller.password);
+      
+      if (!isMatch) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      
+      await db.user.update({
+        where: { id: sellerId },
+        data: { password: hashedPassword }
+      });
+    }
+
+    res.json({ message: "Security settings updated successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating security settings", error: error.message });
+  }
+};
+
+// Settings - Payment
+export const getSellerPaymentSettings = async (req, res) => {
+  try {
+    const sellerId = req.user.verified.id;
+    
+    // For now, return basic payment info
+    res.json({
+      bankAccount: {
+        accountNumber: "****1234",
+        bankName: "First Bank",
+        accountName: "John Doe"
+      },
+      payoutSchedule: "weekly",
+      minimumPayout: 5000,
+      totalEarnings: 150000,
+      pendingPayout: 25000
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching payment settings", error: error.message });
+  }
+};
+
+export const updateSellerPaymentSettings = async (req, res) => {
+  try {
+    const sellerId = req.user.verified.id;
+    const { bankAccount, payoutSchedule, minimumPayout } = req.body;
+
+    // In a real app, this would update payment settings in a separate table
+    res.json({ message: "Payment settings updated successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating payment settings", error: error.message });
+  }
+};
+
+// Product Management
+export const createProduct = async (req, res) => {
+  try {
+    const sellerId = req.user.verified.id;
+    const productData = req.body;
+
+    const product = await db.product.create({
+      data: {
+        ...productData,
+        sellerId
+      }
+    });
+
+    res.status(201).json(product);
+  } catch (error) {
+    res.status(500).json({ message: "Error creating product", error: error.message });
+  }
+};
+
+export const deleteProduct = async (req, res) => {
+  try {
+    const sellerId = req.user.verified.id;
+    const productId = parseInt(req.params.id);
+
+    // Verify ownership
+    const product = await db.product.findFirst({
+      where: {
+        id: productId,
+        sellerId
+      }
+    });
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found or unauthorized" });
+    }
+
+    await db.product.delete({
+      where: { id: productId }
+    });
+
+    res.json({ message: "Product deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting product", error: error.message });
+  }
+}; 

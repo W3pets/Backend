@@ -12,7 +12,18 @@ import {
     getViewsAnalytics,
     getRecentSales,
     getProductPerformance,
-    getSellerNotifications
+    getSellerNotifications,
+    getSellerSupport,
+    getSellerProfileSettings,
+    updateSellerProfileSettings,
+    getSellerNotificationSettings,
+    updateSellerNotificationSettings,
+    getSellerSecuritySettings,
+    updateSellerSecuritySettings,
+    getSellerPaymentSettings,
+    updateSellerPaymentSettings,
+    createProduct,
+    deleteProduct
 } from "../controllers/sellerController.js";
 import multer from "multer";
 
@@ -632,5 +643,511 @@ router.get("/analytics/product-performance", loginRequired, sellerRequired, getP
  *         description: Server error
  */
 router.get("/notifications", loginRequired, sellerRequired, getSellerNotifications);
+
+/**
+ * @swagger
+ * /api/seller/support:
+ *   get:
+ *     summary: Get customer support information
+ *     description: Retrieves support tickets, FAQs, and contact information for sellers
+ *     tags: [Seller Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Support information retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 supportTickets:
+ *                   type: array
+ *                   description: List of support tickets
+ *                 faqs:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       question:
+ *                         type: string
+ *                       answer:
+ *                         type: string
+ *                 contactInfo:
+ *                   type: object
+ *                   properties:
+ *                     email:
+ *                       type: string
+ *                     phone:
+ *                       type: string
+ *                     hours:
+ *                       type: string
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       500:
+ *         description: Server error
+ */
+router.get("/support", loginRequired, sellerRequired, getSellerSupport);
+
+/**
+ * @swagger
+ * /api/seller/settings/profile:
+ *   get:
+ *     summary: Get seller profile settings
+ *     description: Retrieves the seller's profile information and settings
+ *     tags: [Seller Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profile settings retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                 email:
+ *                   type: string
+ *                 businessName:
+ *                   type: string
+ *                 phoneNumber:
+ *                   type: string
+ *                 address:
+ *                   type: string
+ *                 city:
+ *                   type: string
+ *                 state:
+ *                   type: string
+ *                 description:
+ *                   type: string
+ *                 profileImage:
+ *                   type: string
+ *                 location:
+ *                   type: string
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       404:
+ *         description: Seller not found
+ *       500:
+ *         description: Server error
+ */
+router.get("/settings/profile", loginRequired, sellerRequired, getSellerProfileSettings);
+
+/**
+ * @swagger
+ * /api/seller/settings/profile:
+ *   put:
+ *     summary: Update seller profile settings
+ *     description: Updates the seller's profile information and settings
+ *     tags: [Seller Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               businessName:
+ *                 type: string
+ *               phoneNumber:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               city:
+ *                 type: string
+ *               state:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               location:
+ *                 type: object
+ *                 properties:
+ *                   lat:
+ *                     type: number
+ *                   lng:
+ *                     type: number
+ *     responses:
+ *       200:
+ *         description: Profile settings updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                 email:
+ *                   type: string
+ *                 businessName:
+ *                   type: string
+ *                 phoneNumber:
+ *                   type: string
+ *                 address:
+ *                   type: string
+ *                 city:
+ *                   type: string
+ *                 state:
+ *                   type: string
+ *                 description:
+ *                   type: string
+ *                 profileImage:
+ *                   type: string
+ *                 location:
+ *                   type: string
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       500:
+ *         description: Server error
+ */
+router.put("/settings/profile", loginRequired, sellerRequired, updateSellerProfileSettings);
+
+/**
+ * @swagger
+ * /api/seller/settings/notifications:
+ *   get:
+ *     summary: Get seller notification settings
+ *     description: Retrieves the seller's notification preferences
+ *     tags: [Seller Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Notification settings retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 emailNotifications:
+ *                   type: boolean
+ *                 pushNotifications:
+ *                   type: boolean
+ *                 orderNotifications:
+ *                   type: boolean
+ *                 messageNotifications:
+ *                   type: boolean
+ *                 productNotifications:
+ *                   type: boolean
+ *                 marketingNotifications:
+ *                   type: boolean
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       500:
+ *         description: Server error
+ */
+router.get("/settings/notifications", loginRequired, sellerRequired, getSellerNotificationSettings);
+
+/**
+ * @swagger
+ * /api/seller/settings/notifications:
+ *   put:
+ *     summary: Update seller notification settings
+ *     description: Updates the seller's notification preferences
+ *     tags: [Seller Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               emailNotifications:
+ *                 type: boolean
+ *               pushNotifications:
+ *                 type: boolean
+ *               orderNotifications:
+ *                 type: boolean
+ *               messageNotifications:
+ *                 type: boolean
+ *               productNotifications:
+ *                 type: boolean
+ *               marketingNotifications:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Notification settings updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 emailNotifications:
+ *                   type: boolean
+ *                 pushNotifications:
+ *                   type: boolean
+ *                 orderNotifications:
+ *                   type: boolean
+ *                 messageNotifications:
+ *                   type: boolean
+ *                 productNotifications:
+ *                   type: boolean
+ *                 marketingNotifications:
+ *                   type: boolean
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       500:
+ *         description: Server error
+ */
+router.put("/settings/notifications", loginRequired, sellerRequired, updateSellerNotificationSettings);
+
+/**
+ * @swagger
+ * /api/seller/settings/security:
+ *   get:
+ *     summary: Get seller security settings
+ *     description: Retrieves the seller's security settings and information
+ *     tags: [Seller Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Security settings retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 twoFactorEnabled:
+ *                   type: boolean
+ *                 lastPasswordChange:
+ *                   type: string
+ *                   format: date-time
+ *                 loginHistory:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 activeSessions:
+ *                   type: integer
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       500:
+ *         description: Server error
+ */
+router.get("/settings/security", loginRequired, sellerRequired, getSellerSecuritySettings);
+
+/**
+ * @swagger
+ * /api/seller/settings/security:
+ *   put:
+ *     summary: Update seller security settings
+ *     description: Updates the seller's security settings including password change
+ *     tags: [Seller Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *                 description: Current password for verification
+ *               newPassword:
+ *                 type: string
+ *                 description: New password to set
+ *               twoFactorEnabled:
+ *                 type: boolean
+ *                 description: Enable/disable two-factor authentication
+ *     responses:
+ *       200:
+ *         description: Security settings updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Current password is incorrect
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       500:
+ *         description: Server error
+ */
+router.put("/settings/security", loginRequired, sellerRequired, updateSellerSecuritySettings);
+
+/**
+ * @swagger
+ * /api/seller/settings/payment:
+ *   get:
+ *     summary: Get seller payment settings
+ *     description: Retrieves the seller's payment and payout information
+ *     tags: [Seller Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Payment settings retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 bankAccount:
+ *                   type: object
+ *                   properties:
+ *                     accountNumber:
+ *                       type: string
+ *                     bankName:
+ *                       type: string
+ *                     accountName:
+ *                       type: string
+ *                 payoutSchedule:
+ *                   type: string
+ *                 minimumPayout:
+ *                   type: number
+ *                 totalEarnings:
+ *                   type: number
+ *                 pendingPayout:
+ *                   type: number
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       500:
+ *         description: Server error
+ */
+router.get("/settings/payment", loginRequired, sellerRequired, getSellerPaymentSettings);
+
+/**
+ * @swagger
+ * /api/seller/settings/payment:
+ *   put:
+ *     summary: Update seller payment settings
+ *     description: Updates the seller's payment and payout settings
+ *     tags: [Seller Settings]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               bankAccount:
+ *                 type: object
+ *                 properties:
+ *                   accountNumber:
+ *                     type: string
+ *                   bankName:
+ *                     type: string
+ *                   accountName:
+ *                     type: string
+ *               payoutSchedule:
+ *                 type: string
+ *                 description: weekly, monthly, etc.
+ *               minimumPayout:
+ *                 type: number
+ *                 description: Minimum amount for payout
+ *     responses:
+ *       200:
+ *         description: Payment settings updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       500:
+ *         description: Server error
+ */
+router.put("/settings/payment", loginRequired, sellerRequired, updateSellerPaymentSettings);
+
+/**
+ * @swagger
+ * /api/seller/products:
+ *   post:
+ *     summary: Create a new product
+ *     description: Creates a new product listing for the seller
+ *     tags: [Seller Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Product'
+ *     responses:
+ *       201:
+ *         description: Product created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Product'
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       500:
+ *         description: Server error
+ */
+router.post("/products", loginRequired, sellerRequired, createProduct);
+
+/**
+ * @swagger
+ * /api/seller/products/{id}:
+ *   delete:
+ *     summary: Delete a product
+ *     description: Deletes a product listing owned by the seller
+ *     tags: [Seller Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Product ID
+ *     responses:
+ *       200:
+ *         description: Product deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized as a seller
+ *       404:
+ *         description: Product not found or not owned by seller
+ *       500:
+ *         description: Server error
+ */
+router.delete("/products/:id", loginRequired, sellerRequired, deleteProduct);
 
 export default router; 
