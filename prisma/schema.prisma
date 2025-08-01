@@ -194,14 +194,7 @@ model NotificationSettings {
   id                    Int      @id @default(autoincrement())
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId                Int      @unique
-  emailNotifications    Boolean  @default(true)
-  pushNotifications     Boolean  @default(true)
-  orderNotifications    Boolean  @default(true)
-  messageNotifications  Boolean  @default(true)
-  productNotifications  Boolean  @default(true)
-  marketingNotifications Boolean @default(false)
+  preferences           Json     @default("{\"email\":true,\"push\":true,\"order\":true,\"message\":true,\"product\":true,\"marketing\":false}")
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
-
-  @@index([userId])
 }

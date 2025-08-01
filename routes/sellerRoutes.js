@@ -68,6 +68,61 @@ const router = express.Router();
  *           format: binary
  *           description: Product video file (max 20MB)
  *
+ *     Product:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: Product ID
+ *         title:
+ *           type: string
+ *           description: Product title
+ *         price:
+ *           type: number
+ *           description: Product price in Naira
+ *         category:
+ *           type: string
+ *           description: Product category
+ *         breed:
+ *           type: string
+ *           description: Animal breed
+ *         age:
+ *           type: string
+ *           description: Animal age
+ *         gender:
+ *           type: string
+ *           description: Animal gender
+ *         weight:
+ *           type: number
+ *           description: Animal weight
+ *         location:
+ *           type: string
+ *           description: Product location
+ *         description:
+ *           type: string
+ *           description: Product description
+ *         imageUrl:
+ *           type: string
+ *           description: Main product image URL
+ *         videoUrl:
+ *           type: string
+ *           description: Product video URL
+ *         status:
+ *           type: string
+ *           enum: [active, inactive, sold]
+ *           description: Product status
+ *         sellerId:
+ *           type: integer
+ *           description: ID of the seller
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: Creation timestamp
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           description: Last update timestamp
+ *
  *     ListingData:
  *       type: object
  *       required:

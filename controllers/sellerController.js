@@ -1,5 +1,6 @@
 import { db } from "../helpers/db.js";
 import { getFileUrl } from "../helpers/fileUpload.js";
+import { createNotification, getNotificationSettings, updateNotificationSettings } from "../helpers/notification.js";
 
 export const getDashboardStats = async (req, res) => {
     try {
@@ -750,33 +751,17 @@ export const getSellerNotificationSettings = async (req, res) => {
   try {
     const sellerId = req.user.verified.id;
     
-    // Get or create notification settings
-    let settings = await db.notificationSettings.findUnique({
-      where: { userId: sellerId }
-    });
+    // Get notification settings using helper function
+    const preferences = await getNotificationSettings(sellerId);
 
-    // If no settings exist, create default settings
-    if (!settings) {
-      settings = await db.notificationSettings.create({
-        data: {
-          userId: sellerId,
-          emailNotifications: true,
-          pushNotifications: true,
-          orderNotifications: true,
-          messageNotifications: true,
-          productNotifications: true,
-          marketingNotifications: false
-        }
-      });
-    }
-
+    // Return with legacy field names for backward compatibility
     res.json({
-      emailNotifications: settings.emailNotifications,
-      pushNotifications: settings.pushNotifications,
-      orderNotifications: settings.orderNotifications,
-      messageNotifications: settings.messageNotifications,
-      productNotifications: settings.productNotifications,
-      marketingNotifications: settings.marketingNotifications
+      emailNotifications: preferences.email ?? true,
+      pushNotifications: preferences.push ?? true,
+      orderNotifications: preferences.order ?? true,
+      messageNotifications: preferences.message ?? true,
+      productNotifications: preferences.product ?? true,
+      marketingNotifications: preferences.marketing ?? false
     });
   } catch (error) {
     res.status(500).json({ message: "Error fetching notification settings", error: error.message });
@@ -788,37 +773,28 @@ export const updateSellerNotificationSettings = async (req, res) => {
     const sellerId = req.user.verified.id;
     const { emailNotifications, pushNotifications, orderNotifications, messageNotifications, productNotifications, marketingNotifications } = req.body;
 
-    // Update or create notification settings
-    const settings = await db.notificationSettings.upsert({
-      where: { userId: sellerId },
-      update: {
-        emailNotifications,
-        pushNotifications,
-        orderNotifications,
-        messageNotifications,
-        productNotifications,
-        marketingNotifications
-      },
-      create: {
-        userId: sellerId,
-        emailNotifications,
-        pushNotifications,
-        orderNotifications,
-        messageNotifications,
-        productNotifications,
-        marketingNotifications
-      }
-    });
+    // Convert legacy field names to new JSON structure
+    const preferences = {
+      email: emailNotifications,
+      push: pushNotifications,
+      order: orderNotifications,
+      message: messageNotifications,
+      product: productNotifications,
+      marketing: marketingNotifications
+    };
+
+    // Update notification settings using helper function
+    await updateNotificationSettings(sellerId, preferences);
 
     res.json({
       message: "Notification settings updated successfully",
       settings: {
-        emailNotifications: settings.emailNotifications,
-        pushNotifications: settings.pushNotifications,
-        orderNotifications: settings.orderNotifications,
-        messageNotifications: settings.messageNotifications,
-        productNotifications: settings.productNotifications,
-        marketingNotifications: settings.marketingNotifications
+        emailNotifications: preferences.email,
+        pushNotifications: preferences.push,
+        orderNotifications: preferences.order,
+        messageNotifications: preferences.message,
+        productNotifications: preferences.product,
+        marketingNotifications: preferences.marketing
       }
     });
   } catch (error) {
@@ -853,8 +829,8 @@ export const updateSellerSecuritySettings = async (req, res) => {
       if (newPassword.length < 8) {
         return res.status(400).json({ message: "Password must be at least 8 characters long" });
       }
-      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
-        return res.status(400).json({ message: "Password must contain uppercase, lowercase, and numbers" });
+      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/.test(newPassword)) {
+        return res.status(400).json({ message: "Password must contain uppercase, lowercase, numbers, and special characters" });
       }
 
       // Verify current password
