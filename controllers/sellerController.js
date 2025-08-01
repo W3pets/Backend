@@ -701,6 +701,19 @@ export const updateSellerProfileSettings = async (req, res) => {
     const sellerId = req.user.verified.id;
     const { businessName, phoneNumber, address, city, state, description, location } = req.body;
 
+    // Validate input
+    if (phoneNumber && !/^[+]?[\d\s-()]+$/.test(phoneNumber)) {
+      return res.status(400).json({ message: "Invalid phone number format" });
+    }
+
+    // Validate required fields are not empty strings
+    const fields = { businessName, city, state };
+    for (const [key, value] of Object.entries(fields)) {
+      if (value !== undefined && value.trim() === '') {
+        return res.status(400).json({ message: `${key} cannot be empty` });
+      }
+    }
+
     const updatedSeller = await db.user.update({
       where: { id: sellerId },
       data: {
@@ -737,15 +750,33 @@ export const getSellerNotificationSettings = async (req, res) => {
   try {
     const sellerId = req.user.verified.id;
     
-    // For now, return default notification settings
-    // In a real app, this would be stored in a separate table
+    // Get or create notification settings
+    let settings = await db.notificationSettings.findUnique({
+      where: { userId: sellerId }
+    });
+
+    // If no settings exist, create default settings
+    if (!settings) {
+      settings = await db.notificationSettings.create({
+        data: {
+          userId: sellerId,
+          emailNotifications: true,
+          pushNotifications: true,
+          orderNotifications: true,
+          messageNotifications: true,
+          productNotifications: true,
+          marketingNotifications: false
+        }
+      });
+    }
+
     res.json({
-      emailNotifications: true,
-      pushNotifications: true,
-      orderNotifications: true,
-      messageNotifications: true,
-      productNotifications: true,
-      marketingNotifications: false
+      emailNotifications: settings.emailNotifications,
+      pushNotifications: settings.pushNotifications,
+      orderNotifications: settings.orderNotifications,
+      messageNotifications: settings.messageNotifications,
+      productNotifications: settings.productNotifications,
+      marketingNotifications: settings.marketingNotifications
     });
   } catch (error) {
     res.status(500).json({ message: "Error fetching notification settings", error: error.message });
@@ -757,14 +788,38 @@ export const updateSellerNotificationSettings = async (req, res) => {
     const sellerId = req.user.verified.id;
     const { emailNotifications, pushNotifications, orderNotifications, messageNotifications, productNotifications, marketingNotifications } = req.body;
 
-    // In a real app, this would update a notification settings table
+    // Update or create notification settings
+    const settings = await db.notificationSettings.upsert({
+      where: { userId: sellerId },
+      update: {
+        emailNotifications,
+        pushNotifications,
+        orderNotifications,
+        messageNotifications,
+        productNotifications,
+        marketingNotifications
+      },
+      create: {
+        userId: sellerId,
+        emailNotifications,
+        pushNotifications,
+        orderNotifications,
+        messageNotifications,
+        productNotifications,
+        marketingNotifications
+      }
+    });
+
     res.json({
-      emailNotifications,
-      pushNotifications,
-      orderNotifications,
-      messageNotifications,
-      productNotifications,
-      marketingNotifications
+      message: "Notification settings updated successfully",
+      settings: {
+        emailNotifications: settings.emailNotifications,
+        pushNotifications: settings.pushNotifications,
+        orderNotifications: settings.orderNotifications,
+        messageNotifications: settings.messageNotifications,
+        productNotifications: settings.productNotifications,
+        marketingNotifications: settings.marketingNotifications
+      }
     });
   } catch (error) {
     res.status(500).json({ message: "Error updating notification settings", error: error.message });
@@ -794,6 +849,14 @@ export const updateSellerSecuritySettings = async (req, res) => {
     const { currentPassword, newPassword, twoFactorEnabled } = req.body;
 
     if (newPassword) {
+      // Validate password strength
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters long" });
+      }
+      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
+        return res.status(400).json({ message: "Password must contain uppercase, lowercase, and numbers" });
+      }
+
       // Verify current password
       const seller = await db.user.findUnique({
         where: { id: sellerId },
@@ -862,9 +925,31 @@ export const createProduct = async (req, res) => {
     const sellerId = req.user.verified.id;
     const productData = req.body;
 
+    // Validate required fields
+    const { title, price, category, description } = productData;
+    if (!title || !price || !category) {
+      return res.status(400).json({ message: "Missing required fields: title, price, category" });
+    }
+
+    // Validate price is a number
+    if (isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
+      return res.status(400).json({ message: "Price must be a positive number" });
+    }
+
     const product = await db.product.create({
       data: {
-        ...productData,
+        title,
+        price: parseFloat(price),
+        category,
+        description,
+        breed: productData.breed,
+        age: productData.age,
+        gender: productData.gender,
+        weight: productData.weight,
+        location: productData.location,
+        imageUrl: productData.imageUrl,
+        videoUrl: productData.videoUrl,
+        status: 'active',
         sellerId
       }
     });
